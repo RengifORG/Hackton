@@ -59,7 +59,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Solo para mockup de asesor. En prod requeriría auth. */
+        /** @description Solo para mockup de asesor. En prod requeriría auth. Nunca expone el teléfono completo. */
         get: operations["listLeads"];
         put?: never;
         post: operations["createLead"];
@@ -173,8 +173,36 @@ export interface components {
             consent: true;
             sessionId?: string;
         };
-        Lead: components["schemas"]["LeadCreate"] & {
+        /** @description Respuesta de POST /leads. Objeto explícito (no allOf) porque LeadCreate es additionalProperties:false. */
+        Lead: {
             id: string;
+            name: string;
+            phone: string;
+            /** Format: email */
+            email?: string;
+            /** @enum {string} */
+            source: "web" | "whatsapp";
+            interest?: string;
+            recommendedModels?: string[];
+            /** @constant */
+            consent: true;
+            sessionId?: string;
+            /** Format: date-time */
+            createdAt: string;
+            afterHours: boolean;
+            /** @enum {string} */
+            crmStatus?: "pending" | "pushed" | "failed";
+        };
+        /** @description Vista de lectura para asesores. Teléfono siempre enmascarado (09****1234). */
+        LeadRead: {
+            id: string;
+            name: string;
+            /** @example 09****1234 */
+            phoneMasked: string;
+            /** @enum {string} */
+            source: "web" | "whatsapp";
+            interest?: string;
+            recommendedModels?: string[];
             /** Format: date-time */
             createdAt: string;
             afterHours: boolean;
@@ -213,15 +241,24 @@ export interface components {
             vehicle?: string;
             notes?: string;
         };
-        Appointment: components["schemas"]["AppointmentCreate"] & {
+        /** @description Objeto explícito (no allOf) porque AppointmentCreate es additionalProperties:false. */
+        Appointment: {
             id: string;
+            leadId: string;
+            type: components["schemas"]["AppointmentType"];
+            slotId: string;
+            vehicle?: string;
+            notes?: string;
             /** @enum {string} */
             status: "confirmed" | "cancelled";
             /** Format: date-time */
             createdAt: string;
             slot: components["schemas"]["Slot"];
             leadName?: string;
+            /** @example 09****1234 */
             leadPhoneMasked?: string;
+            /** @description Decisión A: línea de cashback SmartClub/Farmaenlace en citas service (opcional). */
+            loyaltyNote?: string;
         };
     };
     responses: {
@@ -328,7 +365,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Lead"][];
+                    "application/json": components["schemas"]["LeadRead"][];
                 };
             };
         };
