@@ -4,6 +4,7 @@ import { useViewerStore } from '@/features/viewer'
 import { ApiError, api } from '@/lib/api/client'
 import { LeadCreateSchema } from '@/lib/api/schemas'
 import type { Hotspot, SuggestedAction } from '@/lib/api/types'
+import { newId } from '@/lib/id'
 import {
   ACTION_PROMPTS,
   CHAT_FAILED,
@@ -80,7 +81,7 @@ export type ChatState = ChatData & ChatActions
 
 function initialData(): ChatData {
   return {
-    sessionId: crypto.randomUUID(),
+    sessionId: newId(),
     modelId: null,
     isOpen: false,
     messages: [],
@@ -94,7 +95,7 @@ function message(
   text: string,
   actions?: SuggestedAction[],
 ): ChatMessage {
-  return { id: crypto.randomUUID(), role, text, actions }
+  return { id: newId(), role, text, actions }
 }
 
 export const useChatStore = create<ChatState>()((set, get) => ({
