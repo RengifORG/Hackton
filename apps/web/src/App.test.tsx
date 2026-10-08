@@ -26,10 +26,10 @@ function renderAt(path: string) {
 }
 
 describe('AppRoutes', () => {
-  it('muestra el asesor virtual en /', () => {
+  it('muestra la landing en /', () => {
     renderAt('/')
     expect(
-      screen.getByRole('heading', { name: 'Asesor virtual BYD' }),
+      screen.getByRole('heading', { name: 'Tu BYD, a cualquier hora' }),
     ).toBeInTheDocument()
   })
 
