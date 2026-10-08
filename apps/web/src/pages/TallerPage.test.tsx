@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
@@ -149,5 +149,47 @@ describe('TallerPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'No se pudo cargar la agenda',
     )
+  })
+})
+
+describe('TallerPage · en vivo', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(NOW)
+  })
+  afterEach(() => {
+    // Vuelve al reloj fijo del resto del archivo.
+    vi.useRealTimers()
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(NOW)
+  })
+
+  it('una cita confirmada sigue confirmada después de una recarga', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await renderLoaded()
+    await user.click(
+      within(articleOf('Valeria Chiriboga')).getByRole('button', {
+        name: 'Confirmar recepción',
+      }),
+    )
+
+    const appointmentRequests = () =>
+      requestedUrls.filter((url) => new URL(url).pathname === '/appointments')
+        .length
+    expect(appointmentRequests()).toBe(1)
+
+    await act(() => vi.advanceTimersByTimeAsync(5000))
+    await waitFor(() => expect(appointmentRequests()).toBe(2))
+    await screen.findByText(/^Actualizado 10:00:0[5-9]$/)
+
+    expect(screen.getAllByRole('article')).toHaveLength(3)
+    expect(
+      within(articleOf('Valeria Chiriboga')).getByRole('button', {
+        name: 'Recepción confirmada',
+      }),
+    ).toBeDisabled()
+    expect(
+      screen.getAllByRole('button', { name: 'Confirmar recepción' }),
+    ).toHaveLength(2)
   })
 })

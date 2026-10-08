@@ -5,12 +5,14 @@ import { AfterHoursBadge } from './AfterHoursBadge'
 
 interface WorkshopAppointmentCardProps {
   item: WorkshopAgendaItem
+  isNew?: boolean
   confirmed: boolean
   onConfirm: (appointmentId: string) => void
 }
 
 export function WorkshopAppointmentCard({
   item,
+  isNew = false,
   confirmed,
   onConfirm,
 }: WorkshopAppointmentCardProps) {
@@ -25,6 +27,7 @@ export function WorkshopAppointmentCard({
         <h3 id={titleId} className="font-semibold text-slate-900">
           {item.leadName}
         </h3>
+        {isNew && <Badge variant="success">Nuevo</Badge>}
         <AfterHoursBadge afterHours={item.afterHours} />
       </div>
 
