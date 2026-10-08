@@ -19,9 +19,15 @@ import {
 } from '../model/assets'
 import { MODEL_ROTATION_Y, modelScale, toVec3 } from '../model/camera'
 import { opaqueMeshes } from '../model/occlusion'
+import {
+  BASE_FOV,
+  MAX_CAMERA_DISTANCE,
+  MIN_CAMERA_DISTANCE,
+} from '../model/views'
 import { useViewerStore } from '../model/viewerStore'
 import { CameraRig } from './CameraRig'
 import { HotspotMarker } from './HotspotMarker'
+import { ResponsiveFov } from './ResponsiveFov'
 import type { ViewerProps } from './types'
 import { useSelectHotspot } from './useSelectHotspot'
 
@@ -53,7 +59,7 @@ function CarScene({ model, onSelect }: CarSceneProps) {
   )
 
   return (
-    <Bounds fit clip observe margin={1.2}>
+    <Bounds fit clip observe margin={1.15}>
       <Center top>
         {/* BVH: el raycast de oclusión corre cada frame con la cámara en movimiento. */}
         <Bvh firstHitOnly>
@@ -84,7 +90,8 @@ export function ViewerCanvas({ model, onHotspotSelect }: ViewerProps) {
   const selectHotspot = useSelectHotspot(onHotspotSelect)
 
   return (
-    <Canvas camera={{ position: [5, 2.5, 6], fov: 40 }} dpr={[1, 2]}>
+    <Canvas camera={{ position: [5, 2.5, 6], fov: BASE_FOV }} dpr={[1, 2]}>
+      <ResponsiveFov />
       <hemisphereLight args={['#ffffff', '#b0b0b0', 0.6]} />
       <Suspense fallback={<Loader />}>
         <CarScene model={model} onSelect={selectHotspot} />
@@ -95,10 +102,11 @@ export function ViewerCanvas({ model, onHotspotSelect }: ViewerProps) {
         makeDefault
         enableZoom
         enableDamping
+        enablePan={false}
         autoRotate={autoRotate}
         autoRotateSpeed={1}
-        minDistance={1.5}
-        maxDistance={12}
+        minDistance={MIN_CAMERA_DISTANCE}
+        maxDistance={MAX_CAMERA_DISTANCE}
         onStart={clearFocus}
       />
       <CameraRig hotspots={model.hotspots ?? []} controls={controls} />
