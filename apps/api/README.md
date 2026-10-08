@@ -35,7 +35,13 @@ Copia `.env.example` a `.env` (ignorado por git). Ninguna es obligatoria para ar
 ## Estado por fase
 - **F0** · scaffold: `GET /health`, `GET /models`, `GET /models/{modelId}` desde `data/catalog.json`. ✅
 - **F1** · H1 leads: `POST /leads` (201, `afterHours` en hora de Ecuador, entrega al CRM, 20/min por IP → 429) y `GET /leads` (bandeja del asesor, vista `LeadRead` con teléfono enmascarado; contrato v0.2.0). ✅
-- F2 disponibilidad y citas · F3 chat · F4 recomendaciones · F5 Bedrock · F6 conformidad y entrega: pendientes.
+- **F2** · H4 citas: `GET /availability?type&date` desde `data/slots.json` (lo genera la API) y `POST /appointments` (201, 404 lead/franja, 409 franja ocupada, 20/min → 429) con `GET /appointments?type`. ✅
+- F3 chat · F4 recomendaciones · F5 Bedrock · F6 conformidad y entrega: pendientes.
+
+## Citas (H4)
+- `data/slots.json` (decisión C): 14 días desde hoy, lunes a sábado, 09:00–17:00 cada hora; `test_drive` en "Quito Norte" (`td-AAAA-MM-DD-HH`) y `service` en "Taller Quito" (`sv-…`). La API lo genera si no existe y lo **regenera si ya no cubre el día de hoy**, así la demo funciona cualquier día.
+- La cita se guarda **antes** de avisar: `test_drive` → `CrmPort.notify_appointment` (HubSpot: stub que solo registra en log; `FakeCrm` en memoria), `service` → `WorkshopPort.create_work_order` (**simulado**: `FakeWorkshop` en memoria, nº de orden `WO-AAAAMMDD-NNN`). Si el aviso falla, la cita sigue confirmada.
+- Citas `service` llevan `loyaltyNote` (decisión A: cashback SmartClub canjeable en Farmaenlace). `leadPhoneMasked` siempre enmascarado.
 
 ## Leads (H1)
 - `afterHours = true` si el lead entra antes de las 08:00 o desde las 18:00 hora de Ecuador.

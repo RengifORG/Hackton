@@ -56,9 +56,18 @@ def test_every_exposed_operation_exists_in_the_contract_with_same_operation_id(
     assert {op: expected[op] for op in exposed} == exposed
 
 
-def test_f0_and_f1_operations_are_implemented(client: TestClient) -> None:
+def test_f0_to_f2_operations_are_implemented(client: TestClient) -> None:
     exposed = _operations(client.get("/openapi.json").json())
-    assert set(exposed.values()) >= {"health", "listModels", "getModel", "createLead", "listLeads"}
+    assert set(exposed.values()) >= {
+        "health",
+        "listModels",
+        "getModel",
+        "createLead",
+        "listLeads",
+        "availability",
+        "createAppointment",
+        "listAppointments",
+    }
 
 
 def test_models_responses_match_contract_schemas(
@@ -89,6 +98,32 @@ def test_leads_responses_match_contract_schemas(
 
     for item in client.get("/leads").json():
         assert_matches_schema(contract, "LeadRead", item)
+
+
+def test_appointments_responses_match_contract_schemas(
+    client: TestClient, contract: dict[str, Any]
+) -> None:
+    lead = client.post(
+        "/leads",
+        json={"name": "Ana Prueba", "phone": "0991234567", "source": "web", "consent": True},
+    ).json()
+    for slot in client.get(
+        "/availability", params={"type": "service", "date": "2026-10-09"}
+    ).json():
+        assert_matches_schema(contract, "Slot", slot)
+
+    for appointment_type, slot_id in (
+        ("test_drive", "td-2026-10-09-10"),
+        ("service", "sv-2026-10-09-10"),
+    ):
+        payload = {"leadId": lead["id"], "type": appointment_type, "slotId": slot_id, "notes": "n"}
+        assert_matches_schema(contract, "AppointmentCreate", payload)
+        created = client.post("/appointments", json=payload)
+        assert created.status_code == 201
+        assert_matches_schema(contract, "Appointment", created.json())
+
+    for item in client.get("/appointments").json():
+        assert_matches_schema(contract, "Appointment", item)
 
 
 def test_contract_validation_is_not_a_no_op(contract: dict[str, Any]) -> None:

@@ -1,7 +1,7 @@
 """CRM de asesores (HubSpot): `CrmPort` + `HubSpotCrm` (real) + `FakeCrm` (simulado/tests).
 
-CA1.5: al crear un lead se invoca `push_lead`. Sin `HUBSPOT_TOKEN` la app usa `FakeCrm`
-(en memoria) y lo declara como simulado en el README.
+CA1.5: al crear un lead se invoca `push_lead`. CA4.3: una cita `test_drive` se notifica al CRM.
+Sin `HUBSPOT_TOKEN` la app usa `FakeCrm` (en memoria) y lo declara como simulado en el README.
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ import httpx
 from fastapi import Depends, Request
 
 from app.core.config import Settings
+from app.schemas.appointment import Appointment
 from app.schemas.lead import Lead
 
 log = logging.getLogger(__name__)
@@ -22,7 +23,7 @@ HUBSPOT_TIMEOUT_S = 5.0
 
 
 class CrmError(RuntimeError):
-    """Fallo al entregar un lead al CRM. El mensaje nunca incluye PII ni el cuerpo remoto."""
+    """Fallo al entregar datos al CRM. El mensaje nunca incluye PII ni el cuerpo remoto."""
 
 
 class CrmPort(Protocol):
@@ -30,12 +31,17 @@ class CrmPort(Protocol):
         """Crea el contacto en el CRM y devuelve su id externo; lanza `CrmError` si falla."""
         ...
 
+    def notify_appointment(self, appointment: Appointment, lead: Lead) -> None:
+        """Avisa al asesor de una cita de prueba de manejo; lanza `CrmError` si falla."""
+        ...
+
 
 class FakeCrm:
-    """CRM simulado en memoria: guarda cada lead recibido. `fail=True` simula una caída."""
+    """CRM simulado en memoria: guarda cada lead y cita recibidos. `fail=True` simula una caída."""
 
     def __init__(self, *, fail: bool = False) -> None:
         self.calls: list[Lead] = []
+        self.appointments: list[tuple[Appointment, Lead]] = []
         self.fail = fail
 
     def push_lead(self, lead: Lead) -> str:
@@ -45,6 +51,15 @@ class FakeCrm:
         external_id = f"fake-crm-{len(self.calls)}"
         log.info("crm contact created (simulado)", extra={"leadId": lead.id, "crmId": external_id})
         return external_id
+
+    def notify_appointment(self, appointment: Appointment, lead: Lead) -> None:
+        self.appointments.append((appointment, lead))
+        if self.fail:
+            raise CrmError("FakeCrm: fallo simulado")
+        log.info(
+            "crm appointment notified (simulado)",
+            extra={"appointmentId": appointment.id, "leadId": lead.id},
+        )
 
 
 class HubSpotCrm:
@@ -69,6 +84,14 @@ class HubSpotCrm:
         external_id = str(response.json().get("id", ""))
         log.info("crm contact created", extra={"leadId": lead.id, "crmId": external_id})
         return external_id
+
+    def notify_appointment(self, appointment: Appointment, lead: Lead) -> None:
+        # Stub documentado (MVP): la cita de prueba de manejo se registraría como engagement
+        # (Meetings API) asociado al contacto; aquí solo se registra en log.
+        log.info(
+            "crm appointment notification (stub, no enviado)",
+            extra={"appointmentId": appointment.id, "leadId": lead.id},
+        )
 
 
 def build_crm(settings: Settings) -> CrmPort:

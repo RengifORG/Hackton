@@ -1,4 +1,4 @@
-"""Fixtures compartidos: app con settings controlados (sin .env), reloj EC fijo y CRM fake."""
+"""Fixtures compartidos: app con settings controlados (sin .env), reloj EC fijo y adapters fake."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.adapters.crm import FakeCrm, get_crm
+from app.adapters.workshop import FakeWorkshop, get_workshop
 from app.core.clock import ECUADOR_TZ, FixedClock
 from app.core.config import DATA_DIR, Settings
 from app.core.ratelimit import limiter
@@ -46,15 +47,23 @@ def fake_crm() -> FakeCrm:
 
 
 @pytest.fixture
-def app(settings: Settings, clock: FixedClock, fake_crm: FakeCrm) -> FastAPI:
+def fake_workshop() -> FakeWorkshop:
+    return FakeWorkshop()
+
+
+@pytest.fixture
+def app(
+    settings: Settings, clock: FixedClock, fake_crm: FakeCrm, fake_workshop: FakeWorkshop
+) -> FastAPI:
     limiter.reset()
     application = create_app(settings, clock=clock)
     application.dependency_overrides[get_crm] = lambda: fake_crm
+    application.dependency_overrides[get_workshop] = lambda: fake_workshop
     return application
 
 
 @pytest.fixture
 def client(app: FastAPI) -> Iterator[TestClient]:
-    # `with` ejecuta el lifespan (carga del catálogo).
+    # `with` ejecuta el lifespan (carga del catálogo y generación de franjas).
     with TestClient(app) as test_client:
         yield test_client
