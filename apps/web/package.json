@@ -9,7 +9,8 @@
     "test": "vitest",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
-    "gen:api": "openapi-typescript ../../docs/openapi.yaml -o src/lib/api/schema.d.ts"
+    "gen:api": "openapi-typescript ../../docs/openapi.yaml -o src/lib/api/schema.d.ts",
+    "check:api": "pnpm gen:api && git diff --exit-code src/lib/api/schema.d.ts"
   },
   "dependencies": {
     "@react-three/drei": "^9",
