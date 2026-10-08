@@ -135,6 +135,7 @@ type AppointmentSeed = {
   hour: number
   vehicle: string
   notes?: string
+  loyaltyNote?: string
 }
 
 const APPOINTMENT_SEEDS: AppointmentSeed[] = [
@@ -144,6 +145,8 @@ const APPOINTMENT_SEEDS: AppointmentSeed[] = [
     hour: 9,
     vehicle: 'BYD Dolphin · PCX-1234',
     notes: 'Mantenimiento de 10.000 km',
+    // Reto 1 (decisión A): beneficio de fidelización en citas service.
+    loyaltyNote: 'Acumulas cashback SmartClub canjeable en Farmaenlace',
   },
   { leadId: 'lead-002', type: 'test_drive', hour: 10, vehicle: 'BYD Seal' },
   {
