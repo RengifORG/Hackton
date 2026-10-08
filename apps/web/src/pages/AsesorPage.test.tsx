@@ -1,7 +1,9 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
+import type { LeadRead } from '@/features/reception/model/schemas'
+import { buildLeads } from '@/mocks/reception/fixtures'
 import { receptionHandlers } from '@/mocks/reception/handlers'
 import { AsesorPage } from './AsesorPage'
 
@@ -104,5 +106,46 @@ describe('AsesorPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'No se pudo cargar la bandeja',
     )
+  })
+})
+
+describe('AsesorPage · en vivo', () => {
+  beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }))
+  afterEach(() => vi.useRealTimers())
+
+  it('tras 5 s muestra el lead nuevo con "Nuevo" sin volver a cargar', async () => {
+    await renderLoaded()
+    expect(dataRows()).toHaveLength(8)
+    expect(screen.queryByText('Nuevo')).toBeNull()
+
+    const newLead: LeadRead = {
+      id: 'lead-009',
+      name: 'Renata Ortiz',
+      phoneMasked: '09****1177',
+      source: 'whatsapp',
+      interest: 'Quiere cotizar un Dolphin para trabajar con apps',
+      recommendedModels: ['dolphin'],
+      createdAt: new Date().toISOString(),
+      afterHours: false,
+      crmStatus: 'pending',
+    }
+    server.use(
+      http.get('*/leads', () =>
+        HttpResponse.json([...buildLeads(new Date()), newLead]),
+      ),
+    )
+
+    await act(() => vi.advanceTimersByTimeAsync(5000))
+    // Sin estado de carga intermedio: la tabla sigue a la vista.
+    expect(screen.queryByText('Cargando bandeja…')).toBeNull()
+    expect(
+      screen.getByRole('table', { name: 'Leads en bandeja' }),
+    ).toBeInTheDocument()
+
+    const newRow = await screen.findByRole('row', { name: /Renata Ortiz/ })
+    expect(within(newRow).getByText('Nuevo')).toBeInTheDocument()
+    expect(dataRows()).toHaveLength(9)
+    expect(screen.getAllByText('Nuevo')).toHaveLength(1)
+    expect(screen.queryByText('Cargando bandeja…')).toBeNull()
   })
 })

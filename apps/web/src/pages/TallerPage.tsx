@@ -1,12 +1,19 @@
 import { useWorkshopAgenda } from '@/features/reception/hooks/useWorkshopAgenda'
+import { LiveStatus } from '@/features/reception/ui/LiveStatus'
 import { WorkshopAppointmentCard } from '@/features/reception/ui/WorkshopAppointmentCard'
 
+const REFRESH_MS = 5000
+
 export function TallerPage() {
-  const { status, groups, isConfirmed, confirmReception } = useWorkshopAgenda()
+  const { status, groups, isConfirmed, confirmReception, lastUpdated, stale } =
+    useWorkshopAgenda({ refreshMs: REFRESH_MS })
 
   return (
     <main className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6">
-      <h1 className="text-2xl font-bold text-slate-900">Agenda del taller</h1>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h1 className="text-2xl font-bold text-slate-900">Agenda del taller</h1>
+        <LiveStatus lastUpdated={lastUpdated} stale={stale} />
+      </div>
 
       {status === 'loading' && (
         <p role="status" className="text-slate-600">
@@ -39,6 +46,7 @@ export function TallerPage() {
               <WorkshopAppointmentCard
                 key={item.id}
                 item={item}
+                isNew={item.isNew}
                 confirmed={isConfirmed(item.id)}
                 onConfirm={confirmReception}
               />
