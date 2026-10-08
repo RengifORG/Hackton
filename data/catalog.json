@@ -29,11 +29,11 @@
       },
       "hotspots": [
         { "id": "wheels", "label": "Llantas y rines", "position": [1.2, 0.35, 1.4] },
-        { "id": "seats", "label": "Asientos", "position": [0.4, 0.9, 0.3] },
-        { "id": "screen", "label": "Pantalla rotativa 12.8\"", "position": [0.0, 1.0, 0.9] },
-        { "id": "battery", "label": "Blade Battery", "position": [0.0, 0.3, 0.0] },
-        { "id": "trunk", "label": "Maletero", "position": [0.0, 0.9, -1.9] },
-        { "id": "lights", "label": "Luces LED", "position": [0.0, 0.7, 2.1] }
+        { "id": "seats", "label": "Asientos", "position": [0.4, 1.33, 0.0] },
+        { "id": "screen", "label": "Pantalla rotativa 12.8\"", "position": [0.0, 1.27, 0.4] },
+        { "id": "battery", "label": "Blade Battery", "position": [1.0, 0.3, 0.0] },
+        { "id": "trunk", "label": "Maletero", "position": [0.0, 1.0, -2.2] },
+        { "id": "lights", "label": "Luces LED", "position": [0.0, 0.9, 2.15] }
       ]
     },
     {
