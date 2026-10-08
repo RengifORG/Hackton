@@ -1,9 +1,5 @@
 import { crmStatusLabel } from '../model/labels'
-import {
-  describeAppointment,
-  formatModelId,
-  type AdvisorRow,
-} from '../model/selectors'
+import { formatModelId, type AdvisorRow } from '../model/selectors'
 
 interface LeadDetailPanelProps {
   row: AdvisorRow
@@ -11,7 +7,7 @@ interface LeadDetailPanelProps {
 }
 
 export function LeadDetailPanel({ row, onClose }: LeadDetailPanelProps) {
-  const { lead, appointment } = row
+  const { lead, appointmentLabel } = row
   const models = lead.recommendedModels ?? []
 
   return (
@@ -62,9 +58,7 @@ export function LeadDetailPanel({ row, onClose }: LeadDetailPanelProps) {
         </div>
         <div>
           <dt className="font-medium text-slate-700">Cita</dt>
-          <dd className="mt-1 text-slate-800">
-            {describeAppointment(appointment)}
-          </dd>
+          <dd className="mt-1 text-slate-800">{appointmentLabel}</dd>
         </div>
       </dl>
 

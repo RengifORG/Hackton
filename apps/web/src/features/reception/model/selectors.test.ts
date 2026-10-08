@@ -51,27 +51,54 @@ describe('indexBy / appointmentByLeadId', () => {
 
 describe('buildAdvisorRows', () => {
   it('une cada lead con su cita, si la tiene', () => {
-    const rows = buildAdvisorRows(leads, appointments)
+    const rows = buildAdvisorRows(leads, appointments, NOW)
     expect(rows).toHaveLength(8)
     const diego = rows.find((row) => row.lead.id === 'lead-002')
     expect(diego?.appointment?.id).toBe(appointmentById('apt-002').id)
+    expect(diego?.appointmentLabel).toBe('Test drive · Hoy 10:00')
     const martin = rows.find((row) => row.lead.id === 'lead-004')
     expect(martin?.appointment).toBeUndefined()
   })
 })
 
 describe('describeAppointment', () => {
-  it('muestra tipo y hora de Ecuador', () => {
-    expect(describeAppointment(appointmentById('apt-002'))).toBe(
-      'Test drive · 10:00',
+  function movedBy(id: string, days: number): Appointment {
+    const base = appointmentById(id)
+    const shift = (iso: string) =>
+      new Date(Date.parse(iso) + days * 24 * 60 * 60 * 1000).toISOString()
+    return {
+      ...base,
+      slot: {
+        ...base.slot,
+        start: shift(base.slot.start),
+        end: shift(base.slot.end),
+      },
+    }
+  }
+
+  it('muestra tipo, "Hoy" y hora de Ecuador', () => {
+    expect(describeAppointment(appointmentById('apt-002'), NOW)).toBe(
+      'Test drive · Hoy 10:00',
     )
-    expect(describeAppointment(appointmentById('apt-001'))).toBe(
-      'Taller · 09:00',
+    expect(describeAppointment(appointmentById('apt-001'), NOW)).toBe(
+      'Taller · Hoy 09:00',
+    )
+  })
+
+  it('una cita de mañana dice "Mañana"', () => {
+    expect(describeAppointment(movedBy('apt-002', 1), NOW)).toBe(
+      'Test drive · Mañana 10:00',
+    )
+  })
+
+  it('más adelante muestra el día de la semana y el número', () => {
+    expect(describeAppointment(movedBy('apt-001', 3), NOW)).toBe(
+      'Taller · Dom 11 09:00',
     )
   })
 
   it('muestra "—" si no hay cita', () => {
-    expect(describeAppointment(undefined)).toBe('—')
+    expect(describeAppointment(undefined, NOW)).toBe('—')
   })
 })
 

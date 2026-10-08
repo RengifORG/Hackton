@@ -4,10 +4,7 @@ import {
   type AdvisorInboxRow,
 } from '@/features/reception/hooks/useAdvisorInbox'
 import { SOURCE_LABELS } from '@/features/reception/model/labels'
-import {
-  describeAppointment,
-  formatModelId,
-} from '@/features/reception/model/selectors'
+import { formatModelId } from '@/features/reception/model/selectors'
 import { AfterHoursBadge } from '@/features/reception/ui/AfterHoursBadge'
 import { LeadDetailPanel } from '@/features/reception/ui/LeadDetailPanel'
 import { LiveStatus } from '@/features/reception/ui/LiveStatus'
@@ -59,10 +56,8 @@ const COLUMNS: Column<AdvisorInboxRow>[] = [
   {
     key: 'appointment',
     header: 'Cita',
-    render: ({ appointment }) => (
-      <span className="whitespace-nowrap">
-        {describeAppointment(appointment)}
-      </span>
+    render: ({ appointmentLabel }) => (
+      <span className="whitespace-nowrap">{appointmentLabel}</span>
     ),
   },
 ]

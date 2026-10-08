@@ -36,6 +36,8 @@ export interface AdvisorKpis {
 export interface AdvisorRow {
   lead: LeadRead
   appointment: Appointment | undefined
+  /** "Test drive · Mañana 10:00" o "—". */
+  appointmentLabel: string
 }
 
 export interface WorkshopAgendaItem {
@@ -107,16 +109,29 @@ export function appointmentByLeadId(
 export function buildAdvisorRows(
   leads: readonly LeadRead[],
   appointments: readonly Appointment[],
+  now: Date,
 ): AdvisorRow[] {
   const byLead = appointmentByLeadId(appointments)
-  return leads.map((lead) => ({ lead, appointment: byLead.get(lead.id) }))
+  return leads.map((lead) => {
+    const appointment = byLead.get(lead.id)
+    return {
+      lead,
+      appointment,
+      appointmentLabel: describeAppointment(appointment, now),
+    }
+  })
 }
 
+/** "Test drive · Hoy 10:00", "Taller · Mañana 09:00" o "Taller · Dom 11 09:00". */
 export function describeAppointment(
   appointment: Appointment | undefined,
+  now: Date,
 ): string {
   if (!appointment) return NO_VALUE
-  return `${APPOINTMENT_TYPE_LABELS[appointment.type]} · ${formatTime(appointment.slot.start)}`
+  const { start } = appointment.slot
+  const dateKey = ecuadorDateKey(new Date(start))
+  const day = formatRelativeDay(dateKey, dayOffsetFromKey(dateKey, now))
+  return `${APPOINTMENT_TYPE_LABELS[appointment.type]} · ${day} ${formatTime(start)}`
 }
 
 export function isSameEcuadorDay(iso: string, now: Date): boolean {
@@ -146,10 +161,23 @@ export function ecuadorDayOffset(iso: string, now: Date): number {
 
 /** "Hoy · jue 8", "Mañana · vie 9" o "Sáb 10". */
 export function formatAgendaDay(dateKey: string, offset: number): string {
+  const relative = formatRelativeDay(dateKey, offset)
+  return offset === 0 || offset === 1
+    ? `${relative} · ${shortDay(dateKey)}`
+    : relative
+}
+
+/** "jue 8": día de la semana abreviado y número. */
+function shortDay(dateKey: string): string {
   const utc = new Date(dateKeyToUtc(dateKey))
-  const short = `${WEEKDAYS[utc.getUTCDay()] ?? ''} ${utc.getUTCDate()}`
-  if (offset === 0) return `Hoy · ${short}`
-  if (offset === 1) return `Mañana · ${short}`
+  return `${WEEKDAYS[utc.getUTCDay()] ?? ''} ${utc.getUTCDate()}`
+}
+
+/** "Hoy", "Mañana" o "Dom 11". */
+export function formatRelativeDay(dateKey: string, offset: number): string {
+  if (offset === 0) return 'Hoy'
+  if (offset === 1) return 'Mañana'
+  const short = shortDay(dateKey)
   return short.charAt(0).toUpperCase() + short.slice(1)
 }
 

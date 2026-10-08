@@ -15,7 +15,8 @@ async function loadInbox(baseUrl: string) {
     fetchLeads(baseUrl),
     fetchAppointments(baseUrl),
   ])
-  return { leads, appointments }
+  // `now` se fija al cargar (no en render) para que el render sea puro.
+  return { leads, appointments, now: new Date() }
 }
 
 export interface AdvisorInboxRow extends AdvisorRow {
@@ -58,10 +59,12 @@ export function useAdvisorInbox({
       initial === data ? null : initial.leads.map((lead) => lead.id),
       data.leads.map((lead) => lead.id),
     )
-    return buildAdvisorRows(data.leads, data.appointments).map((row) => ({
-      ...row,
-      isNew: newIds.has(row.lead.id),
-    }))
+    return buildAdvisorRows(data.leads, data.appointments, data.now).map(
+      (row) => ({
+        ...row,
+        isNew: newIds.has(row.lead.id),
+      }),
+    )
   }, [data, initial])
   const selected = rows.find((row) => row.lead.id === selectedId)
 
