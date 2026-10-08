@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import type { LeadRead } from '@/features/reception/model/schemas'
-import { buildLeads } from '@/mocks/reception/fixtures'
+import { buildAppointments, buildLeads } from '@/mocks/reception/fixtures'
 import { receptionHandlers } from '@/mocks/reception/handlers'
 import { AsesorPage } from './AsesorPage'
 
@@ -52,12 +52,36 @@ describe('AsesorPage', () => {
     expect(screen.getByRole('group', { name: label })).toHaveTextContent(value)
   })
 
-  it('muestra la cita de cada lead o "—"', async () => {
+  it('muestra la cita de cada lead (con el día) o "—"', async () => {
     await renderLoaded()
     const diego = screen.getByText('Diego Salazar').closest('tr')
-    expect(diego).toHaveTextContent('Test drive · 10:00')
+    expect(diego).toHaveTextContent('Test drive · Hoy 10:00')
     const martin = screen.getByText('Martín Cevallos').closest('tr')
     expect(martin).toHaveTextContent('—')
+  })
+
+  it('una cita agendada para mañana dice "Mañana" en la columna Cita', async () => {
+    const day = 24 * 60 * 60 * 1000
+    const shift = (iso: string) => new Date(Date.parse(iso) + day).toISOString()
+    server.use(
+      http.get('*/appointments', () =>
+        HttpResponse.json(
+          buildAppointments(new Date()).map((appointment) => ({
+            ...appointment,
+            slot: {
+              ...appointment.slot,
+              start: shift(appointment.slot.start),
+              end: shift(appointment.slot.end),
+            },
+          })),
+        ),
+      ),
+    )
+
+    await renderLoaded()
+
+    const diego = screen.getByText('Diego Salazar').closest('tr')
+    expect(diego).toHaveTextContent('Test drive · Mañana 10:00')
   })
 
   it('al hacer click en "Diego Salazar" abre el detalle', async () => {

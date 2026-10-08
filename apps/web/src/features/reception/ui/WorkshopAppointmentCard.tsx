@@ -24,9 +24,9 @@ export function WorkshopAppointmentCard({
       className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
     >
       <div className="flex flex-wrap items-center gap-2">
-        <h3 id={titleId} className="font-semibold text-slate-900">
+        <h4 id={titleId} className="font-semibold text-slate-900">
           {item.leadName}
-        </h3>
+        </h4>
         {isNew && <Badge variant="success">Nuevo</Badge>}
         <AfterHoursBadge afterHours={item.afterHours} />
       </div>

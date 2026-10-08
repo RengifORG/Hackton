@@ -36,6 +36,8 @@ export interface AdvisorKpis {
 export interface AdvisorRow {
   lead: LeadRead
   appointment: Appointment | undefined
+  /** "Test drive · Mañana 10:00" o "—". */
+  appointmentLabel: string
 }
 
 export interface WorkshopAgendaItem {
@@ -53,6 +55,20 @@ export interface WorkshopSlotGroup {
   label: string
   items: WorkshopAgendaItem[]
 }
+
+export interface WorkshopDayGroup {
+  /** YYYY-MM-DD en hora de Ecuador. */
+  date: string
+  label: string
+  slots: WorkshopSlotGroup[]
+}
+
+/** La agenda muestra hoy y los próximos N días (las citas del demo suelen caer mañana). */
+export const AGENDA_DAYS_AHEAD = 7
+
+// Tabla propia para no depender de cómo abrevia cada ICU ("jue" vs "jue.").
+const WEEKDAYS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
+const DAY_MS = 24 * 60 * 60 * 1000
 
 export interface Vehicle {
   model: string
@@ -93,42 +109,117 @@ export function appointmentByLeadId(
 export function buildAdvisorRows(
   leads: readonly LeadRead[],
   appointments: readonly Appointment[],
+  now: Date,
 ): AdvisorRow[] {
   const byLead = appointmentByLeadId(appointments)
-  return leads.map((lead) => ({ lead, appointment: byLead.get(lead.id) }))
+  return leads.map((lead) => {
+    const appointment = byLead.get(lead.id)
+    return {
+      lead,
+      appointment,
+      appointmentLabel: describeAppointment(appointment, now),
+    }
+  })
 }
 
+/** "Test drive · Hoy 10:00", "Taller · Mañana 09:00" o "Taller · Dom 11 09:00". */
 export function describeAppointment(
   appointment: Appointment | undefined,
+  now: Date,
 ): string {
   if (!appointment) return NO_VALUE
-  return `${APPOINTMENT_TYPE_LABELS[appointment.type]} · ${formatTime(appointment.slot.start)}`
+  const { start } = appointment.slot
+  const dateKey = ecuadorDateKey(new Date(start))
+  const day = formatRelativeDay(dateKey, dayOffsetFromKey(dateKey, now))
+  return `${APPOINTMENT_TYPE_LABELS[appointment.type]} · ${day} ${formatTime(start)}`
 }
 
 export function isSameEcuadorDay(iso: string, now: Date): boolean {
   return ecuadorDate.format(new Date(iso)) === ecuadorDate.format(now)
 }
 
-export function buildWorkshopAgenda(
-  appointments: readonly Appointment[],
-  leads: readonly LeadRead[],
-  now: Date,
-): WorkshopSlotGroup[] {
-  const leadsById = indexBy(leads)
-  const todayService = sortBySlotStart(
-    appointments.filter(
-      (a) => a.type === 'service' && isSameEcuadorDay(a.slot.start, now),
-    ),
-  )
+/** Fecha YYYY-MM-DD en hora de Ecuador. */
+function ecuadorDateKey(date: Date): string {
+  return ecuadorDate.format(date)
+}
 
+/** Medianoche UTC de una fecha YYYY-MM-DD: sirve para restar días sin horario de verano. */
+function dateKeyToUtc(key: string): number {
+  const [year = 0, month = 1, day = 1] = key.split('-').map(Number)
+  return Date.UTC(year, month - 1, day)
+}
+
+function dayOffsetFromKey(dateKey: string, now: Date): number {
+  const diff = dateKeyToUtc(dateKey) - dateKeyToUtc(ecuadorDateKey(now))
+  return Math.round(diff / DAY_MS)
+}
+
+/** Días entre la fecha (en Ecuador) de `iso` y la de `now`: 0 hoy, 1 mañana, -1 ayer. */
+export function ecuadorDayOffset(iso: string, now: Date): number {
+  return dayOffsetFromKey(ecuadorDateKey(new Date(iso)), now)
+}
+
+/** "Hoy · jue 8", "Mañana · vie 9" o "Sáb 10". */
+export function formatAgendaDay(dateKey: string, offset: number): string {
+  const relative = formatRelativeDay(dateKey, offset)
+  return offset === 0 || offset === 1
+    ? `${relative} · ${shortDay(dateKey)}`
+    : relative
+}
+
+/** "jue 8": día de la semana abreviado y número. */
+function shortDay(dateKey: string): string {
+  const utc = new Date(dateKeyToUtc(dateKey))
+  return `${WEEKDAYS[utc.getUTCDay()] ?? ''} ${utc.getUTCDate()}`
+}
+
+/** "Hoy", "Mañana" o "Dom 11". */
+export function formatRelativeDay(dateKey: string, offset: number): string {
+  if (offset === 0) return 'Hoy'
+  if (offset === 1) return 'Mañana'
+  const short = shortDay(dateKey)
+  return short.charAt(0).toUpperCase() + short.slice(1)
+}
+
+function groupBySlot(
+  appointments: readonly Appointment[],
+  leadsById: Map<string, LeadRead>,
+): WorkshopSlotGroup[] {
   const groups = new Map<string, WorkshopAgendaItem[]>()
-  for (const appointment of todayService) {
+  for (const appointment of appointments) {
     const label = `${formatTime(appointment.slot.start)}–${formatTime(appointment.slot.end)}`
     const items = groups.get(label) ?? []
     items.push(toAgendaItem(appointment, leadsById.get(appointment.leadId)))
     groups.set(label, items)
   }
   return [...groups].map(([label, items]) => ({ label, items }))
+}
+
+/** Citas service de hoy y los próximos AGENDA_DAYS_AHEAD días, por día y por franja. */
+export function buildWorkshopAgenda(
+  appointments: readonly Appointment[],
+  leads: readonly LeadRead[],
+  now: Date,
+): WorkshopDayGroup[] {
+  const leadsById = indexBy(leads)
+  const upcoming = sortBySlotStart(
+    appointments.filter((a) => {
+      if (a.type !== 'service') return false
+      const offset = ecuadorDayOffset(a.slot.start, now)
+      return offset >= 0 && offset <= AGENDA_DAYS_AHEAD
+    }),
+  )
+
+  const days = new Map<string, Appointment[]>()
+  for (const appointment of upcoming) {
+    const date = ecuadorDateKey(new Date(appointment.slot.start))
+    days.set(date, [...(days.get(date) ?? []), appointment])
+  }
+  return [...days].map(([date, dayAppointments]) => ({
+    date,
+    label: formatAgendaDay(date, dayOffsetFromKey(date, now)),
+    slots: groupBySlot(dayAppointments, leadsById),
+  }))
 }
 
 function toAgendaItem(

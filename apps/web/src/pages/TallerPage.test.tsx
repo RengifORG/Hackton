@@ -75,6 +75,51 @@ describe('TallerPage', () => {
     }
   })
 
+  it('agrupa las franjas bajo el encabezado del día "Hoy · jue 8"', async () => {
+    await renderLoaded()
+    const today = screen.getByRole('region', { name: 'Hoy · jue 8' })
+    expect(
+      within(today).getByRole('heading', { level: 2, name: 'Hoy · jue 8' }),
+    ).toBeInTheDocument()
+    expect(within(today).getAllByRole('article')).toHaveLength(3)
+  })
+
+  it('una cita de mañana aparece bajo "Mañana · vie 9"', async () => {
+    const base = serviceAppointments[0]
+    if (!base) throw new Error('los fixtures deben tener citas service')
+    const tomorrow = {
+      ...base,
+      id: 'apt-tomorrow',
+      leadName: 'Cliente de Mañana',
+      slot: {
+        ...base.slot,
+        start: '2026-10-09T15:00:00Z',
+        end: '2026-10-09T16:00:00Z',
+      },
+    }
+    server.use(
+      http.get('*/appointments', () =>
+        HttpResponse.json([...serviceAppointments, tomorrow]),
+      ),
+    )
+
+    await renderLoaded()
+
+    const tomorrowSection = screen.getByRole('region', {
+      name: 'Mañana · vie 9',
+    })
+    expect(
+      within(tomorrowSection).getByRole('article', {
+        name: 'Cliente de Mañana',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('region', { name: 'Hoy · jue 8' })).queryByText(
+        'Cliente de Mañana',
+      ),
+    ).toBeNull()
+  })
+
   it('muestra cliente, teléfono, vehículo, placa y motivo', async () => {
     await renderLoaded()
     const article = articleOf('Valeria Chiriboga')
@@ -133,11 +178,11 @@ describe('TallerPage', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Cargando')
   })
 
-  it('muestra el estado vacío "Sin citas de taller hoy"', async () => {
+  it('muestra el estado vacío "Sin citas de taller en los próximos 7 días"', async () => {
     server.use(http.get('*/appointments', () => HttpResponse.json([])))
     render(<TallerPage />)
     expect(
-      await screen.findByText('Sin citas de taller hoy'),
+      await screen.findByText('Sin citas de taller en los próximos 7 días'),
     ).toBeInTheDocument()
   })
 
