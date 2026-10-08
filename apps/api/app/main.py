@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.adapters.calendar import SlotsRepository
 from app.adapters.crm import build_crm
+from app.adapters.llm import build_llm
 from app.adapters.workshop import build_workshop
 from app.core.clock import Clock, SystemClock
 from app.core.config import Settings, get_settings
@@ -39,7 +40,11 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
         )
         log.info(
             "startup",
-            extra={"models": len(app.state.catalog_repo), "slots": len(app.state.slots_repo)},
+            extra={
+                "models": len(app.state.catalog_repo),
+                "slots": len(app.state.slots_repo),
+                "llm": settings.bedrock_model_id if app.state.llm else "off (determinista)",
+            },
         )
         yield
         log.info("shutdown")
@@ -55,6 +60,7 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
     app.state.clock = clock or SystemClock()
     app.state.crm = build_crm(settings)
     app.state.workshop = build_workshop(settings)
+    app.state.llm = build_llm(settings)
     app.state.lead_repo = LeadRepo()
     app.state.appointment_repo = AppointmentRepo()
     app.state.session_repo = SessionRepo()

@@ -183,3 +183,13 @@ def test_parse_profile_combines_everything() -> None:
     assert parse_profile(
         "familia de 4, ciudad, presupuesto 30k, sí puedo cargar en casa"
     ) == Profile(usage="ciudad", passengers=4, budget=30000, home_charger=True)
+
+
+def test_phone_or_id_in_the_profile_is_not_read_as_budget() -> None:
+    from app.core.pii import redact_free_text
+
+    profile = parse_profile(
+        redact_free_text("familia de 4, 30k, cel 0991234567, cédula 1712345678")
+    )
+    assert profile.budget == 30_000
+    assert profile.passengers == 4

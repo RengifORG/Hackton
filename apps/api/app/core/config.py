@@ -30,10 +30,15 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173"
     catalog_path: Path = DATA_DIR / "catalog.json"
     slots_path: Path = DATA_DIR / "slots.json"
-    # LLM (F5): solo si USE_BEDROCK=1; nunca credenciales en código.
+    # LLM (F5): solo si USE_BEDROCK=1; nunca credenciales en código. pydantic-settings no
+    # exporta el .env a os.environ: el perfil se pasa explícito a boto3 (`AWS_PROFILE`).
     use_bedrock: bool = False
     aws_region: str = "us-east-1"
-    bedrock_model_id: str = "amazon.nova-lite-v1:0"
+    aws_profile: str | None = None
+    # D3: Claude Haiku 4.5 vía perfil de inferencia `us.`; respaldo `amazon.nova-lite-v1:0`.
+    bedrock_model_id: str = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+    bedrock_guardrail_id: str | None = None
+    bedrock_guardrail_version: str = "DRAFT"
     # CRM (F1): si falta, se usa FakeCrm.
     hubspot_token: SecretStr | None = None
 

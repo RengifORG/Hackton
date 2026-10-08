@@ -2,12 +2,14 @@
 
 puntaje = cercanía al presupuesto ×3 + match de `idealFor` con uso/pasajeros(/cargador) ×2
           + 3 si el cliente no puede cargar en casa y el modelo es híbrido enchufable (PHEV).
-Siempre devuelve exactamente 3 modelos del catálogo (CA2.1/CA2.3). En F5 el LLM propone ids
-por tool use y este mismo servicio los valida; si falla, se usa este scoring.
+Siempre devuelve exactamente 3 modelos del catálogo (CA2.1/CA2.3). F5 (CA2.2): si hay LLM,
+propone 3 ids por tool use forzado (`recommend_models`); el servicio los valida con Pydantic y
+contra el catálogo y, si algo falla, usa este scoring. Las razones siempre salen del scoring.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import unicodedata
@@ -15,7 +17,10 @@ from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import Depends
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from app.adapters.llm import LlmDep, LlmError, LlmPort, ToolSpec
+from app.core.pii import redact_free_text
 from app.repositories.catalog import CatalogDep, CatalogRepo
 from app.schemas.model import Model
 from app.schemas.recommendation import Recommendation
@@ -167,21 +172,66 @@ class Scored:
     reason: str
 
 
+class RecommendModelsInput(BaseModel):
+    """Payload de la tool `recommend_models`: se valida antes de usarlo (CLAUDE.md §4)."""
+
+    model_config = ConfigDict(extra="forbid", protected_namespaces=())
+
+    model_ids: list[str] = Field(alias="modelIds", min_length=TOP_N, max_length=TOP_N)
+
+
+RECOMMEND_TOOL = ToolSpec(
+    name="recommend_models",
+    description=(
+        "Elige exactamente 3 modelos BYD del catálogo para el perfil del cliente, del más al "
+        "menos recomendado. Usa solo ids del catálogo entregado en las instrucciones."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "modelIds": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Exactamente 3 ids distintos del catálogo",
+            }
+        },
+        "required": ["modelIds"],
+        "additionalProperties": False,
+    },
+    strict=True,
+)
+RECOMMEND_SYSTEM = (
+    "Eres asesor comercial de BYD Ecuador. Recomienda modelos solo de este catálogo (JSON): "
+    "{catalog}\nLlama a recommend_models con exactamente 3 ids distintos del catálogo, del más "
+    "al menos adecuado al perfil (presupuesto, uso, pasajeros y si puede cargar en casa). "
+    "No inventes modelos ni precios."
+)
+
+
 class RecommendationService:
-    def __init__(self, catalog: CatalogRepo) -> None:
+    def __init__(self, catalog: CatalogRepo, llm: LlmPort | None = None) -> None:
         self._catalog = catalog
+        self._llm = llm
 
     def recommend(self, profile_text: str) -> list[Recommendation]:
-        """Exactamente 3 modelos del catálogo, ordenados por puntaje (desempate: precio, orden)."""
-        profile = parse_profile(profile_text)
+        """Exactamente 3 modelos del catálogo: los que elija el LLM (validados) o, si no hay LLM
+        o falla, los de mayor puntaje (desempate: precio, orden del catálogo)."""
+        # Sin PII: un celular o una cédula no deben leerse como presupuesto ni pasajeros.
+        profile = parse_profile(redact_free_text(profile_text))
         scored = [self._score(model, profile) for model in self._catalog.list()]
-        ranked = sorted(
-            enumerate(scored), key=lambda pair: (-pair[1].score, pair[1].model.price, pair[0])
-        )
-        top = [s for _, s in ranked[:TOP_N]]
+        llm_ids = self._llm_pick(profile_text)
+        if llm_ids:
+            by_id = {s.model.id: s for s in scored}
+            top = [by_id[model_id] for model_id in llm_ids]
+        else:
+            ranked = sorted(
+                enumerate(scored), key=lambda pair: (-pair[1].score, pair[1].model.price, pair[0])
+            )
+            top = [s for _, s in ranked[:TOP_N]]
         log.info(
             "recommendation",
             extra={
+                "source": "llm" if llm_ids else "scoring",
                 "usage": profile.usage,
                 "passengers": profile.passengers,
                 "budget": profile.budget,
@@ -195,6 +245,42 @@ class RecommendationService:
             )
             for s in top
         ]
+
+    def _llm_pick(self, profile_text: str) -> list[str] | None:
+        """1 llamada con tool forzada; devuelve 3 ids distintos del catálogo o None (fallback)."""
+        if self._llm is None:
+            return None
+        catalog_min = [
+            {
+                "id": m.id,
+                "name": m.name,
+                "price": m.price,
+                "segment": m.segment,
+                "rangeKm": m.range_km,
+                "idealFor": self._catalog.ideal_for(m.id),
+            }
+            for m in self._catalog.list()
+        ]
+        system = RECOMMEND_SYSTEM.format(catalog=json.dumps(catalog_min, ensure_ascii=False))
+        messages = [{"role": "user", "content": [{"text": redact_free_text(profile_text)}]}]
+        try:
+            result = self._llm.complete(
+                system,
+                messages,
+                [RECOMMEND_TOOL],
+                force_tool=RECOMMEND_TOOL.name,
+                temperature=0.0,
+                max_tokens=200,
+            )
+            if result.tool_name != RECOMMEND_TOOL.name or result.tool_input is None:
+                raise ValueError("no tool_use")
+            ids = RecommendModelsInput.model_validate(result.tool_input).model_ids
+            if len(set(ids)) != TOP_N or any(self._catalog.get(i) is None for i in ids):
+                raise ValueError("ids fuera del catálogo o repetidos")
+        except (LlmError, ValidationError, ValueError) as exc:
+            log.warning("llm recommendation discarded", extra={"error": type(exc).__name__})
+            return None
+        return ids
 
     def _score(self, model: Model, profile: Profile) -> Scored:
         ideal = [_norm(t) for t in self._catalog.ideal_for(model.id)]
@@ -237,8 +323,8 @@ class RecommendationService:
         return Scored(model, score, " · ".join(reasons)[:REASON_MAX])
 
 
-def get_recommendation_service(catalog: CatalogDep) -> RecommendationService:
-    return RecommendationService(catalog)
+def get_recommendation_service(catalog: CatalogDep, llm: LlmDep) -> RecommendationService:
+    return RecommendationService(catalog, llm)
 
 
 RecommendationServiceDep = Annotated[RecommendationService, Depends(get_recommendation_service)]
