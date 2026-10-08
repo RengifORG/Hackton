@@ -1,0 +1,25 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# node
+node_modules/
+dist/
+coverage/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# os / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# 3d assets grandes van por LFS o se referencian
+*.blend
