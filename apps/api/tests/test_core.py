@@ -13,9 +13,10 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
-from app.core.clock import ECUADOR_TZ, FixedClock, SystemClock
+from app.core.clock import ECUADOR_TZ, DemoClock, FixedClock, SystemClock
 from app.core.config import Settings
-from app.core.logging import JsonFormatter, build_handler, configure_logging, mask_phone, redact
+from app.core.logging import JsonFormatter, build_handler, configure_logging, redact
+from app.core.pii import mask_phone
 from app.main import create_app
 
 
@@ -80,6 +81,12 @@ def test_create_app_accepts_an_injected_clock(settings: Settings) -> None:
 )
 def test_mask_phone_keeps_prefix_and_last_four(phone: str) -> None:
     assert mask_phone(phone) == "09****4567"
+
+
+def test_fixed_clock_can_be_moved() -> None:
+    clock = FixedClock(datetime(2026, 10, 8, 10, 0))
+    clock.set(datetime(2026, 10, 8, 19, 0))
+    assert clock.now().hour == 19
 
 
 def test_redact_masks_phone_email_and_national_id() -> None:
@@ -191,3 +198,28 @@ def test_configure_logging_installs_one_redacting_json_handler_and_routes_uvicor
     assert lines[1]["email"] == "[email]"
 
     configure_logging("INFO")  # restaura stderr para el resto de la suite
+
+
+def test_demo_clock_starts_at_demo_now_and_advances_with_real_time() -> None:
+    ticks = [50.0]
+    start = datetime(2026, 10, 8, 19, 0, tzinfo=ECUADOR_TZ)
+    demo = DemoClock(start, monotonic=lambda: ticks[0])
+    assert demo.now() == start
+    ticks[0] += 90
+    assert demo.now() == start + timedelta(seconds=90)
+    assert demo.now().tzinfo is not None
+
+
+def test_demo_now_setting_makes_leads_after_hours(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    settings = Settings(
+        _env_file=None,
+        demo_now=datetime(2026, 10, 8, 19, 0, tzinfo=ECUADOR_TZ),
+        slots_path=tmp_path / "slots.json",
+    )
+    with TestClient(create_app(settings)) as client:
+        response = client.post(
+            "/leads",
+            json={"name": "Ana Prueba", "phone": "0991234567", "source": "web", "consent": True},
+        )
+    assert response.status_code == 201, response.text
+    assert response.json()["afterHours"] is True

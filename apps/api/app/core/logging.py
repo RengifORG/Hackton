@@ -14,12 +14,13 @@ import sys
 from datetime import UTC, datetime
 from typing import Any
 
+from app.core.pii import mask_phone
+
 # Teléfono EC local (09…) o internacional (+5939… / %2B5939…), tolerando espacios, puntos o
 # guiones entre dígitos; email; cédula (10 dígitos seguidos).
 _PHONE_RE = re.compile(r"(?<![\d+])(?:\+593|%2B593|0)[ .-]?9(?:[ .-]?\d){8}(?!\d)")
 _EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 _NATIONAL_ID_RE = re.compile(r"(?<!\d)\d{10}(?!\d)")
-_NON_DIGITS_RE = re.compile(r"\D")
 
 _HANDLER_MARK = "_byd_json_handler"
 # Atributos propios de LogRecord (no son campos `extra=`); `color_message` lo añade uvicorn.
@@ -27,16 +28,6 @@ _STANDARD_ATTRS = frozenset(
     set(vars(logging.LogRecord("x", logging.INFO, "x", 0, "x", None, None)))
     | {"message", "asctime", "color_message"}
 )
-
-
-def mask_phone(phone: str) -> str:
-    """`0991234567`, `+593 99 123 4567` → `09****4567` (formato `leadPhoneMasked` del contrato)."""
-    digits = _NON_DIGITS_RE.sub("", phone.replace("%2B", "+").replace("%2b", "+"))
-    if digits.startswith("593"):
-        digits = "0" + digits[3:]
-    if len(digits) < 6:
-        return "****"
-    return f"{digits[:2]}****{digits[-4:]}"
 
 
 def redact(text: str) -> str:

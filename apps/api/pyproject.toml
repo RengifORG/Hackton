@@ -21,8 +21,10 @@ dev = [
     # httpx2: Starlette >=1.7 lo usa en TestClient (con httpx solo emite DeprecationWarning).
     "httpx2>=2.13.1",
     "hypothesis>=6.168.5",
+    "jsonschema-rs>=0.58.6",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
+    "pyyaml>=6.0.3",
     "ruff>=0.16.10",
     "schemathesis>=4.30.0",
 ]

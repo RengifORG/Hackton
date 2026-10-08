@@ -86,9 +86,10 @@ def test_routes_are_not_under_api_prefix(client: TestClient) -> None:
     assert client.get("/api/health").status_code == 404
 
 
-def test_generated_openapi_uses_contract_paths_and_declares_404(client: TestClient) -> None:
+def test_generated_openapi_get_model_uses_contract_param_and_declares_404(
+    client: TestClient,
+) -> None:
     paths = client.get("/openapi.json").json()["paths"]
-    assert set(paths) == {"/health", "/models", "/models/{modelId}"}
     get_model = paths["/models/{modelId}"]["get"]
     assert get_model["operationId"] == "getModel"
     assert get_model["parameters"][0]["name"] == "modelId"
