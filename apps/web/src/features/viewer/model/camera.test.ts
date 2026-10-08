@@ -11,7 +11,7 @@ describe('camera', () => {
   })
 
   it('cameraPoseFor del hotspot wheels apunta al hotspot desde 2.2 m', () => {
-    const wheels = findCatalogModel('dolphin')?.hotspots.find(
+    const wheels = findCatalogModel('seagull')?.hotspots.find(
       ({ id }) => id === 'wheels',
     )
     if (!wheels) throw new Error('el catálogo debe tener el hotspot wheels')

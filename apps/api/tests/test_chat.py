@@ -89,8 +89,8 @@ def test_wheels_question_on_first_message_returns_hotspot_and_catalog_data(
         ("cuánto tarda la carga", "battery", "30"),
         ("tamaño del maletero", "trunk", "345"),
         ("cabe mucho en la cajuela?", "trunk", "345"),
-        ("cómo son las luces", "lights", "Luces LED"),
-        ("los faros son led?", "lights", "Luces LED"),
+        ("cómo son las luces", "lights", "No tengo ese dato"),  # el Dolphin ya no tiene 3D
+        ("los faros son led?", "lights", "No tengo ese dato"),
     ],
 )
 def test_hotspot_synonyms_and_replies_come_from_the_catalog(
@@ -101,6 +101,38 @@ def test_hotspot_synonyms_and_replies_come_from_the_catalog(
     assert body["hotspot"] == hotspot
     assert snippet in body["reply"]
     assert body["suggestedActions"][0] == "view_3d"
+
+
+@pytest.mark.parametrize(
+    ("message", "hotspot", "snippet"),
+    [
+        ("cómo son los asientos", "seats", "4 plazas"),
+        ("cuánta batería tiene", "battery", "30.08"),
+        ("cuál es la autonomía", "battery", "305"),
+        ("cómo son las luces", "lights", "Luces"),
+        ("¿y las ruedas?", "wheels", "No tengo ese dato"),  # sin dato en el catálogo: no inventa
+        ("tamaño del maletero", "trunk", "No tengo ese dato"),
+    ],
+)
+def test_seagull_page_answers_with_the_seagull_catalog(
+    client: TestClient, message: str, hotspot: str, snippet: str
+) -> None:
+    chat(client, "sess-seagull-01", "hola", modelId="seagull")
+    body = chat(client, "sess-seagull-01", message, modelId="seagull")
+    assert body["hotspot"] == hotspot
+    assert snippet in body["reply"]
+    assert "Dolphin" not in body["reply"]
+
+
+def test_model_named_by_the_customer_wins_over_the_page_model(client: TestClient) -> None:
+    chat(client, "sess-seagull-02", "hola", modelId="seagull")
+    body = chat(client, "sess-seagull-02", "¿y el dolphin cuánta batería tiene?", modelId="seagull")
+    assert "44.9" in body["reply"] and "Dolphin" in body["reply"]
+
+
+def test_without_model_the_detail_is_about_the_3d_model(client: TestClient) -> None:
+    body = chat(client, "sess-seagull-03", "cuánta batería tiene")
+    assert "BYD Seagull" in body["reply"] and "30.08" in body["reply"]
 
 
 def test_missing_catalog_data_is_not_invented(client: TestClient) -> None:

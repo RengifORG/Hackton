@@ -21,11 +21,11 @@ describe('HomePage (landing)', () => {
     expect(screen.getByText(/18:00/)).toBeInTheDocument()
     expect(
       screen.getByRole('link', { name: 'Hablar con el asesor virtual' }),
-    ).toHaveAttribute('href', '/modelos/dolphin')
+    ).toHaveAttribute('href', '/modelos/seagull')
   })
 
   it.each([
-    ['Ver el Dolphin en 3D', '/modelos/dolphin'],
+    ['Ver el Seagull en 3D', '/modelos/seagull'],
     ['Bandeja del asesor', '/asesor'],
     ['Agenda del taller', '/taller'],
   ])('la tarjeta "%s" lleva a %s', (name, href) => {

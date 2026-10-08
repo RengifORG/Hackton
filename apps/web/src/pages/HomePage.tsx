@@ -2,8 +2,8 @@ import { Link } from 'react-router-dom'
 
 const NAV_CARDS = [
   {
-    to: '/modelos/dolphin',
-    title: 'Ver el Dolphin en 3D',
+    to: '/modelos/seagull',
+    title: 'Ver el Seagull en 3D',
     description: 'Gíralo 360°, toca sus partes y pregunta al asesor.',
   },
   {
@@ -30,11 +30,11 @@ export function HomePage() {
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">
           El call center cierra a las 18:00, pero tus preguntas no. Nuestro
-          asesor virtual te atiende las 24 horas: conoce el Dolphin, deja tus
+          asesor virtual te atiende las 24 horas: conoce el Seagull, deja tus
           datos y agenda tu prueba de manejo sin esperar al día siguiente.
         </p>
         <Link
-          to="/modelos/dolphin"
+          to="/modelos/seagull"
           className="mt-8 inline-block rounded-full bg-slate-900 px-8 py-3 text-base font-semibold text-white shadow-lg hover:bg-slate-700"
         >
           Hablar con el asesor virtual

@@ -15,7 +15,7 @@ PERFIL
  P3 Presupuesto aprox (USD): <25k | 25-35k | 35-45k | >45k
  P4 ¿Puedes cargar en casa/trabajo?: sí | no   (no → priorizar PHEV)
  → POST /recommendations(profile) → 3 modelos con razón
- → "¿Quieres ver el Dolphin en 3D / dejar tus datos / agendar prueba?"
+ → "¿Quieres ver el Seagull en 3D / dejar tus datos / agendar prueba?"
 
 CONTACTO (siempre antes de CITA)
  nombre, teléfono (EC), email opcional, consentimiento → POST /leads

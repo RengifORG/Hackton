@@ -1,6 +1,6 @@
 # BYD Ecuador — Agente de leads 24/7 (MVP Hackathon)
 
-Captura leads fuera del horario del call center, recomienda 3 modelos, muestra el Dolphin en 3D y agenda citas que llegan al asesor (HubSpot) y al taller.
+Captura leads fuera del horario del call center, recomienda 3 modelos, muestra el Seagull en 3D y agenda citas que llegan al asesor (HubSpot) y al taller.
 
 ## Arranque
 ```
@@ -18,4 +18,4 @@ cd apps/api && uv sync && uv run uvicorn app.main:app --reload   # http://localh
 - Prompts por terminal en `prompts/`.
 
 ## Rutas web
-`/` landing+chat · `/modelos/dolphin` 3D+chat · `/asesor` bandeja CRM mock · `/taller` agenda taller mock
+`/` landing+chat · `/modelos/seagull` 3D+chat · `/asesor` bandeja CRM mock · `/taller` agenda taller mock

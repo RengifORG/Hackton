@@ -48,11 +48,12 @@ def test_list_models_has_model_summary_shape_in_camel_case(client: TestClient) -
 
 
 def test_get_model_returns_full_model_with_specs_and_hotspots(client: TestClient) -> None:
-    response = client.get("/models/dolphin")
+    # El modelo con vista 3D es el BYD Seagull (el .glb de la web es un Seagull).
+    response = client.get("/models/seagull")
     assert response.status_code == 200
     body = response.json()
-    raw = _raw_catalog()["dolphin"]
-    assert body["id"] == "dolphin"
+    raw = _raw_catalog()["seagull"]
+    assert body["id"] == "seagull"
     assert body["name"] == raw["name"]
     assert body["price"] == raw["price"]
     assert body["rangeKm"] == raw["rangeKm"]
@@ -68,10 +69,10 @@ def test_get_model_returns_full_model_with_specs_and_hotspots(client: TestClient
 
 
 def test_get_model_without_3d_has_empty_hotspots_and_its_specs(client: TestClient) -> None:
-    body = client.get("/models/seagull").json()
+    body = client.get("/models/dolphin").json()
     assert body["has3d"] is False
     assert body["hotspots"] == []
-    assert body["specs"] == _raw_catalog()["seagull"]["specs"]
+    assert body["specs"] == _raw_catalog()["dolphin"]["specs"]  # ficha completa, sin 3D
 
 
 @pytest.mark.parametrize("model_id", ["no-existe", "DOLPHIN", "dolphin "])

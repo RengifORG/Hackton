@@ -3,10 +3,11 @@ import { useModel } from '@/features/catalog'
 import { ChatPanel, useChatStore } from '@/features/chat'
 import { CarViewer } from '@/features/viewer'
 
-const MODEL_ID = 'dolphin'
+// El .glb es un BYD Seagull (public/models/CREDITS.md): la página y el chat usan su ficha.
+const MODEL_ID = 'seagull'
 
 // El header mide h-14 (3.5rem): visor y chat ocupan el resto del alto visible.
-export function DolphinPage() {
+export function SeagullPage() {
   const result = useModel(MODEL_ID)
   const setModel = useChatStore((state) => state.setModel)
   const askAboutHotspot = useChatStore((state) => state.askAboutHotspot)
@@ -19,7 +20,7 @@ export function DolphinPage() {
   return (
     <div className="min-h-dvh bg-white">
       <header className="flex h-14 items-center border-b border-slate-200 px-4">
-        <h1 className="text-lg font-bold">BYD Dolphin</h1>
+        <h1 className="text-lg font-bold">BYD Seagull</h1>
       </header>
       <main className="grid grid-cols-1 md:grid-cols-[1fr_380px]">
         <section
