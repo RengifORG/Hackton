@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: BYD Ecuador Lead Agent API
-  version: 0.1.0
+  version: 0.2.0
   description: Contrato único entre web (React) y api (FastAPI). Cambios solo vía PR etiquetado `contract`.
 servers:
   - url: http://localhost:8000
@@ -53,14 +53,14 @@ paths:
         "429": { $ref: "#/components/responses/RateLimited" }
     get:
       operationId: listLeads
-      description: Solo para mockup de asesor. En prod requeriría auth.
+      description: Solo para mockup de asesor. En prod requeriría auth. Nunca expone el teléfono completo.
       responses:
         "200":
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: "#/components/schemas/Lead" }
+                items: { $ref: "#/components/schemas/LeadRead" }
 
   /recommendations:
     post:
@@ -209,6 +209,21 @@ components:
             createdAt: { type: string, format: date-time }
             afterHours: { type: boolean }
             crmStatus: { type: string, enum: [pending, pushed, failed] }
+    LeadRead:
+      description: Vista de lectura para asesores. Teléfono siempre enmascarado (09****1234).
+      type: object
+      additionalProperties: false
+      required: [id, name, phoneMasked, source, createdAt, afterHours]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        phoneMasked: { type: string, pattern: "^09\\*{4}\\d{4}$", example: "09****1234" }
+        source: { type: string, enum: [web, whatsapp] }
+        interest: { type: string, maxLength: 200 }
+        recommendedModels: { type: array, items: { type: string }, maxItems: 3 }
+        createdAt: { type: string, format: date-time }
+        afterHours: { type: boolean }
+        crmStatus: { type: string, enum: [pending, pushed, failed] }
     Recommendation:
       type: object
       required: [modelId, name, price, reason]
