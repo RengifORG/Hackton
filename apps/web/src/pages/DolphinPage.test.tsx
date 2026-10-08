@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { setupServer } from 'msw/node'
 import { MemoryRouter } from 'react-router-dom'
 import { handlers } from '@/mocks/handlers'
-import { AppRoutes } from './App'
+import { DolphinPage } from './DolphinPage'
 
 const server = setupServer(...handlers)
 
@@ -17,30 +17,20 @@ afterEach(() => {
 })
 afterAll(() => server.close())
 
-function renderAt(path: string) {
-  return render(
-    <MemoryRouter initialEntries={[path]}>
-      <AppRoutes />
-    </MemoryRouter>,
-  )
-}
+describe('DolphinPage', () => {
+  it('muestra el heading y, sin WebGL, el fallback con los 6 hotspots', async () => {
+    render(
+      <MemoryRouter>
+        <DolphinPage />
+      </MemoryRouter>,
+    )
 
-describe('AppRoutes', () => {
-  it('muestra el asesor virtual en /', () => {
-    renderAt('/')
-    expect(
-      screen.getByRole('heading', { name: 'Asesor virtual BYD' }),
-    ).toBeInTheDocument()
-  })
-
-  it('muestra el BYD Dolphin en /modelos/dolphin', async () => {
-    renderAt('/modelos/dolphin')
     expect(
       screen.getByRole('heading', { name: 'BYD Dolphin' }),
     ).toBeInTheDocument()
-    // Espera a que termine la carga del modelo para no dejar updates colgando.
     expect(
       await screen.findByText('Tu navegador no soporta 3D'),
     ).toBeInTheDocument()
+    expect(screen.getAllByRole('button')).toHaveLength(6)
   })
 })
