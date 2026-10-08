@@ -92,4 +92,22 @@ describe('AppointmentSchema', () => {
       ).toBe(false)
     },
   )
+
+  it('acepta loyaltyNote opcional de hasta 200 caracteres (C3)', () => {
+    expect(
+      AppointmentSchema.safeParse({
+        ...validAppointment,
+        loyaltyNote: 'x'.repeat(200),
+      }).success,
+    ).toBe(true)
+  })
+
+  it('rechaza loyaltyNote de más de 200 caracteres (C3)', () => {
+    expect(
+      AppointmentSchema.safeParse({
+        ...validAppointment,
+        loyaltyNote: 'x'.repeat(201),
+      }).success,
+    ).toBe(false)
+  })
 })
