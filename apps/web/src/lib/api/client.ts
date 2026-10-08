@@ -2,8 +2,19 @@ import createClient from 'openapi-fetch'
 import { z } from 'zod'
 import { env } from '@/lib/env'
 import type { paths } from './schema'
-import { ModelSchema, ModelSummarySchema } from './schemas'
-import type { Model, ModelSummary } from './types'
+import {
+  ChatResponseSchema,
+  ModelSchema,
+  ModelSummarySchema,
+  RecommendationsResponseSchema,
+} from './schemas'
+import type {
+  ChatRequest,
+  ChatResponse,
+  Model,
+  ModelSummary,
+  Recommendation,
+} from './types'
 
 export class ApiError extends Error {
   readonly status: number
@@ -47,6 +58,23 @@ export function createApiClient(baseUrl: string) {
       })
       ensureOk(response, `GET /models/${modelId}`)
       return ModelSchema.parse(data)
+    },
+
+    async chat(request: ChatRequest): Promise<ChatResponse> {
+      const { data, response } = await client.POST('/chat', { body: request })
+      ensureOk(response, 'POST /chat')
+      return ChatResponseSchema.parse(data)
+    },
+
+    async recommend(
+      profile: string,
+      sessionId?: string,
+    ): Promise<Recommendation[]> {
+      const { data, response } = await client.POST('/recommendations', {
+        body: { profile, sessionId },
+      })
+      ensureOk(response, 'POST /recommendations')
+      return RecommendationsResponseSchema.parse(data).items
     },
   }
 }
