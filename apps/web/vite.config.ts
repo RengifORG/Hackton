@@ -5,6 +5,8 @@ import { defineConfig } from 'vitest/config'
 
 const projectRoot = fileURLToPath(new URL('.', import.meta.url))
 const dataDir = fileURLToPath(new URL('../../data', import.meta.url))
+// Solo para tests que leen el contrato con `?raw` (patrones que no se generan).
+const docsDir = fileURLToPath(new URL('../../docs', import.meta.url))
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -16,7 +18,7 @@ export default defineConfig({
   },
   server: {
     fs: {
-      allow: [projectRoot, dataDir],
+      allow: [projectRoot, dataDir, docsDir],
     },
   },
   test: {
