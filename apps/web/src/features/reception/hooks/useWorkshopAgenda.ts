@@ -5,12 +5,12 @@ import {
   buildWorkshopAgenda,
   markNewIds,
   type WorkshopAgendaItem,
-  type WorkshopSlotGroup,
+  type WorkshopDayGroup,
 } from '../model/selectors'
 import { useRemoteData, type RemoteData } from './useRemoteData'
 
 // `now` se fija al cargar (no en render) para que el render sea puro.
-async function loadAgenda(baseUrl: string): Promise<WorkshopSlotGroup[]> {
+async function loadAgenda(baseUrl: string): Promise<WorkshopDayGroup[]> {
   const [appointments, leads] = await Promise.all([
     fetchAppointments(baseUrl, 'service'),
     fetchLeads(baseUrl),
@@ -18,8 +18,10 @@ async function loadAgenda(baseUrl: string): Promise<WorkshopSlotGroup[]> {
   return buildWorkshopAgenda(appointments, leads, new Date())
 }
 
-function itemIds(groups: readonly WorkshopSlotGroup[]): string[] {
-  return groups.flatMap((group) => group.items.map((item) => item.id))
+function itemIds(days: readonly WorkshopDayGroup[]): string[] {
+  return days.flatMap((day) =>
+    day.slots.flatMap((slot) => slot.items.map((item) => item.id)),
+  )
 }
 
 export interface WorkshopAgendaLiveItem extends WorkshopAgendaItem {
@@ -27,14 +29,20 @@ export interface WorkshopAgendaLiveItem extends WorkshopAgendaItem {
   isNew: boolean
 }
 
-export interface WorkshopAgendaLiveGroup {
+export interface WorkshopAgendaLiveSlot {
   label: string
   items: WorkshopAgendaLiveItem[]
 }
 
+export interface WorkshopAgendaLiveDay {
+  date: string
+  label: string
+  slots: WorkshopAgendaLiveSlot[]
+}
+
 export interface WorkshopAgenda {
   status: RemoteData<unknown>['status']
-  groups: WorkshopAgendaLiveGroup[]
+  days: WorkshopAgendaLiveDay[]
   isConfirmed: (appointmentId: string) => boolean
   confirmReception: (appointmentId: string) => void
   lastUpdated: Date | undefined
@@ -57,17 +65,21 @@ export function useWorkshopAgenda({
   const data = success?.data
   const initial = success?.initial
 
-  const groups = useMemo(() => {
+  const days = useMemo(() => {
     if (!data || !initial) return []
     const newIds = markNewIds(
       initial === data ? null : itemIds(initial),
       itemIds(data),
     )
-    return data.map((group) => ({
-      label: group.label,
-      items: group.items.map((item) => ({
-        ...item,
-        isNew: newIds.has(item.id),
+    return data.map((day) => ({
+      date: day.date,
+      label: day.label,
+      slots: day.slots.map((slot) => ({
+        label: slot.label,
+        items: slot.items.map((item) => ({
+          ...item,
+          isNew: newIds.has(item.id),
+        })),
       })),
     }))
   }, [data, initial])
@@ -78,7 +90,7 @@ export function useWorkshopAgenda({
 
   return {
     status: state.status,
-    groups,
+    days,
     isConfirmed: (appointmentId) => confirmed.has(appointmentId),
     confirmReception,
     lastUpdated: success?.lastUpdated,

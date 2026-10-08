@@ -85,15 +85,37 @@ describe('isSameEcuadorDay', () => {
 })
 
 describe('buildWorkshopAgenda', () => {
-  const tomorrowService: Appointment = {
-    ...appointmentById('apt-003'),
-    id: 'apt-tomorrow',
-    slot: {
-      ...appointmentById('apt-003').slot,
-      start: '2026-10-09T14:00:00Z',
-      end: '2026-10-09T15:00:00Z',
-    },
+  // NOW = jue 8 oct 2026, 10:00 en Ecuador (UTC-5).
+  function serviceAt(id: string, start: string, end: string): Appointment {
+    const base = appointmentById('apt-003')
+    return { ...base, id, slot: { ...base.slot, start, end } }
   }
+  const tomorrowService = serviceAt(
+    'apt-tomorrow',
+    '2026-10-09T14:00:00Z',
+    '2026-10-09T15:00:00Z',
+  )
+  // 23:30 del jue 8 en Ecuador, aunque en UTC ya es vie 9.
+  const lateTodayService = serviceAt(
+    'apt-late-today',
+    '2026-10-09T04:30:00Z',
+    '2026-10-09T05:30:00Z',
+  )
+  const inSevenDays = serviceAt(
+    'apt-plus-7',
+    '2026-10-15T14:00:00Z',
+    '2026-10-15T15:00:00Z',
+  )
+  const inEightDays = serviceAt(
+    'apt-plus-8',
+    '2026-10-16T14:00:00Z',
+    '2026-10-16T15:00:00Z',
+  )
+  const yesterday = serviceAt(
+    'apt-yesterday',
+    '2026-10-07T14:00:00Z',
+    '2026-10-07T15:00:00Z',
+  )
   const sameSlotUnknownLead: Appointment = {
     ...appointmentById('apt-001'),
     id: 'apt-extra',
@@ -103,27 +125,54 @@ describe('buildWorkshopAgenda', () => {
   const input = [
     ...appointments,
     tomorrowService,
+    lateTodayService,
+    inSevenDays,
+    inEightDays,
+    yesterday,
     sameSlotUnknownLead,
   ].reverse()
   const agenda = buildWorkshopAgenda(input, leads, NOW)
-  const items = agenda.flatMap((group) => group.items)
+  const items = agenda.flatMap((day) => day.slots.flatMap((slot) => slot.items))
 
-  it('solo trae citas service del día', () => {
+  it('trae citas service de hoy y los próximos 7 días (ni ayer ni +8)', () => {
     expect(items.map((item) => item.id).sort()).toEqual([
       'apt-001',
       'apt-003',
       'apt-005',
       'apt-extra',
+      'apt-late-today',
+      'apt-plus-7',
+      'apt-tomorrow',
     ])
   })
 
-  it('ordena por inicio y agrupa por franja HH:mm–HH:mm', () => {
-    expect(agenda.map((group) => group.label)).toEqual([
+  it('agrupa por día en orden con encabezados "Hoy · …", "Mañana · …" y el día', () => {
+    expect(agenda.map((day) => day.label)).toEqual([
+      'Hoy · jue 8',
+      'Mañana · vie 9',
+      'Jue 15',
+    ])
+  })
+
+  it('una cita de mañana aparece bajo "Mañana"', () => {
+    const tomorrow = agenda.find((day) => day.label.startsWith('Mañana'))
+    expect(
+      tomorrow?.slots.flatMap((slot) => slot.items.map((item) => item.id)),
+    ).toEqual(['apt-tomorrow'])
+  })
+
+  it('el día se calcula en hora de Ecuador (23:30 del jueves sigue siendo hoy)', () => {
+    expect(agenda[0]?.slots.at(-1)?.label).toBe('23:30–00:30')
+  })
+
+  it('dentro del día ordena por inicio y agrupa por franja HH:mm–HH:mm', () => {
+    expect(agenda[0]?.slots.map((slot) => slot.label)).toEqual([
       '09:00–10:00',
       '11:00–12:00',
       '15:00–16:00',
+      '23:30–00:30',
     ])
-    expect(agenda[0]?.items.map((item) => item.id).sort()).toEqual([
+    expect(agenda[0]?.slots[0]?.items.map((item) => item.id).sort()).toEqual([
       'apt-001',
       'apt-extra',
     ])
