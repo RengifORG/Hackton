@@ -6,12 +6,14 @@ Thread-safe: FastAPI ejecuta las rutas síncronas en un pool de hilos.
 from __future__ import annotations
 
 import threading
+from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import Annotated
 
 from fastapi import Depends, Request
 
 from app.schemas.appointment import Appointment, AppointmentType
-from app.schemas.lead import Lead
+from app.schemas.lead import Lead, LeadSource
 
 
 class LeadRepo:
@@ -79,6 +81,60 @@ class AppointmentRepo:
             return len(self._items)
 
 
+class Stage(StrEnum):
+    """Etapas de la conversación (decision-tree.md): CONTACTO siempre antes de CITA."""
+
+    START = "start"
+    PROFILE = "profile"
+    DETAIL = "detail"
+    CONTACT = "contact"
+    SLOT = "slot"
+    DONE = "done"
+
+
+@dataclass
+class ChatSession:
+    """Estado por `sessionId`. Los datos de contacto pendientes se borran al crear el lead."""
+
+    session_id: str
+    stage: Stage = Stage.START
+    greeted: bool = False
+    source: LeadSource = LeadSource.WEB
+    model_id: str | None = None
+    lead_id: str | None = None
+    lead_first_name: str | None = None
+    pending_type: AppointmentType | None = None  # None en CONTACT = solo dejar datos
+    pending_name: str | None = None
+    pending_phone: str | None = None
+    awaiting_consent: bool = False
+    offered_slots: list[str] = field(default_factory=list)
+    profile: dict[str, str] = field(default_factory=dict)
+
+
+class SessionRepo:
+    """Sesiones de chat por id (web y, en F7, WhatsApp)."""
+
+    def __init__(self) -> None:
+        self._items: dict[str, ChatSession] = {}
+        self._lock = threading.Lock()
+
+    def get_or_create(self, session_id: str) -> ChatSession:
+        with self._lock:
+            session = self._items.get(session_id)
+            if session is None:
+                session = ChatSession(session_id=session_id)
+                self._items[session_id] = session
+            return session
+
+    def get(self, session_id: str) -> ChatSession | None:
+        with self._lock:
+            return self._items.get(session_id)
+
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._items)
+
+
 def get_lead_repo(request: Request) -> LeadRepo:
     return request.app.state.lead_repo
 
@@ -87,5 +143,10 @@ def get_appointment_repo(request: Request) -> AppointmentRepo:
     return request.app.state.appointment_repo
 
 
+def get_session_repo(request: Request) -> SessionRepo:
+    return request.app.state.session_repo
+
+
 LeadRepoDep = Annotated[LeadRepo, Depends(get_lead_repo)]
 AppointmentRepoDep = Annotated[AppointmentRepo, Depends(get_appointment_repo)]
+SessionRepoDep = Annotated[SessionRepo, Depends(get_session_repo)]

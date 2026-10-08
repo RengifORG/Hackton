@@ -67,7 +67,27 @@ def test_f0_to_f2_operations_are_implemented(client: TestClient) -> None:
         "availability",
         "createAppointment",
         "listAppointments",
+        "chat",
     }
+
+
+def test_chat_responses_match_contract_schemas(
+    client: TestClient, contract: dict[str, Any]
+) -> None:
+    request = {
+        "sessionId": "sess-contract-chat",
+        "message": "cuéntame de las llantas",
+        "modelId": "dolphin",
+    }
+    assert_matches_schema(contract, "ChatRequest", request)
+    response = client.post("/chat", json=request)
+    assert response.status_code == 200
+    assert_matches_schema(contract, "ChatResponse", response.json())
+    assert_matches_schema(
+        contract,
+        "ChatResponse",
+        client.post("/chat", json={"sessionId": "sess-contract-chat", "message": "hola"}).json(),
+    )
 
 
 def test_models_responses_match_contract_schemas(
