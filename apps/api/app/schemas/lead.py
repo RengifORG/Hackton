@@ -59,7 +59,7 @@ class LeadCreate(StrictInput):
 
 
 class Lead(CamelModel):
-    """Lead persistido. En `GET /leads` `phone` y `email` salen enmascarados (`09****1234`)."""
+    """Lead persistido y respuesta de `POST /leads` (contrato: `Lead`, objeto explícito)."""
 
     id: str
     name: str
@@ -70,6 +70,28 @@ class Lead(CamelModel):
     recommended_models: list[str] | None = None
     consent: Literal[True] = True
     session_id: str | None = None
+    created_at: datetime
+    after_hours: bool
+    crm_status: CrmStatus | None = None
+
+
+# Patrón `LeadRead.phoneMasked` del contrato v0.2.0.
+PHONE_MASKED_PATTERN = r"^09\*{4}[0-9]{4}$"
+
+
+class LeadRead(CamelModel):
+    """Vista de lectura para la bandeja del asesor (`GET /leads`, contrato `LeadRead`).
+
+    Nunca expone el teléfono completo ni el email; `additionalProperties: false` en el contrato,
+    así que no se añaden campos fuera de esta lista.
+    """
+
+    id: str
+    name: str
+    phone_masked: str = Field(pattern=PHONE_MASKED_PATTERN)
+    source: LeadSource
+    interest: str | None = None
+    recommended_models: list[str] | None = None
     created_at: datetime
     after_hours: bool
     crm_status: CrmStatus | None = None

@@ -34,14 +34,15 @@ Copia `.env.example` a `.env` (ignorado por git). Ninguna es obligatoria para ar
 
 ## Estado por fase
 - **F0** · scaffold: `GET /health`, `GET /models`, `GET /models/{modelId}` desde `data/catalog.json`. ✅
-- **F1** · H1 leads: `POST /leads` (201, `afterHours` en hora de Ecuador, entrega al CRM, 20/min por IP → 429) y `GET /leads` (bandeja del asesor, teléfono y email enmascarados). ✅
+- **F1** · H1 leads: `POST /leads` (201, `afterHours` en hora de Ecuador, entrega al CRM, 20/min por IP → 429) y `GET /leads` (bandeja del asesor, vista `LeadRead` con teléfono enmascarado; contrato v0.2.0). ✅
 - F2 disponibilidad y citas · F3 chat · F4 recomendaciones · F5 Bedrock · F6 conformidad y entrega: pendientes.
 
 ## Leads (H1)
 - `afterHours = true` si el lead entra antes de las 08:00 o desde las 18:00 hora de Ecuador.
 - El lead se guarda **antes** de llamar al CRM: si el CRM falla, queda con `crmStatus: "failed"` y no se pierde.
 - CRM: con `HUBSPOT_TOKEN` se crea el contacto en HubSpot (Contacts API v3); sin token se usa `FakeCrm` en memoria (**simulado**).
-- `GET /leads` devuelve `phone` como `09****1234` y `email` como `a***@dominio`. El CRM sí recibe el teléfono completo.
+- `GET /leads` devuelve la vista `LeadRead`: `phoneMasked` (`09****1234`) y sin email, consentimiento ni `sessionId`. El CRM sí recibe el teléfono completo.
+- `tests/test_contract.py` valida las respuestas reales contra `docs/openapi.yaml` (JSON Schema) además de las rutas y `operationId`.
 - Rate limit solo en escrituras (`POST`); las lecturas no se limitan porque las bandejas las refrescan cada pocos segundos.
 
 La sección **"qué es real vs simulado"** se completa en F6.

@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from app.core.clock import ECUADOR_TZ, FixedClock, SystemClock
 from app.core.config import Settings
 from app.core.logging import JsonFormatter, build_handler, configure_logging, redact
-from app.core.pii import mask_email, mask_phone
+from app.core.pii import mask_phone
 from app.main import create_app
 
 
@@ -81,19 +81,6 @@ def test_create_app_accepts_an_injected_clock(settings: Settings) -> None:
 )
 def test_mask_phone_keeps_prefix_and_last_four(phone: str) -> None:
     assert mask_phone(phone) == "09****4567"
-
-
-@pytest.mark.parametrize(
-    ("email", "masked"),
-    [
-        ("ana.perez@example.com", "a***@example.com"),
-        ("x@b.ec", "x***@b.ec"),
-        ("sin-arroba", "***"),
-        ("@example.com", "***"),
-    ],
-)
-def test_mask_email_keeps_first_char_and_domain(email: str, masked: str) -> None:
-    assert mask_email(email) == masked
 
 
 def test_fixed_clock_can_be_moved() -> None:

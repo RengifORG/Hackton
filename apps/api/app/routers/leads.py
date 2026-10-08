@@ -7,7 +7,7 @@ no podría resolver anotaciones en texto contra el módulo de slowapi.
 from fastapi import APIRouter, Request, status
 
 from app.core.ratelimit import RATE_LIMIT, limiter
-from app.schemas.lead import Lead, LeadCreate
+from app.schemas.lead import Lead, LeadCreate, LeadRead
 from app.services.lead_service import LeadServiceDep
 
 router = APIRouter(prefix="/leads", tags=["leads"])
@@ -31,12 +31,12 @@ def create_lead(request: Request, payload: LeadCreate, service: LeadServiceDep) 
 
 @router.get(
     "",
-    response_model=list[Lead],
+    response_model=list[LeadRead],
     response_model_exclude_none=True,
     operation_id="listLeads",
     description=(
-        "Solo para mockup de asesor. En prod requeriría auth. Teléfono y email salen enmascarados."
+        "Solo para mockup de asesor. En prod requeriría auth. Nunca expone el teléfono completo."
     ),
 )
-def list_leads(service: LeadServiceDep) -> list[Lead]:
+def list_leads(service: LeadServiceDep) -> list[LeadRead]:
     return service.list_for_advisor()

@@ -13,6 +13,9 @@ from app.adapters.crm import FakeCrm
 from app.core.clock import ECUADOR_TZ, FixedClock
 
 LEAD_REQUIRED = {"id", "createdAt", "afterHours", "name", "phone", "source", "consent"}
+# Contrato v0.2.0 · `LeadRead` (GET /leads): additionalProperties:false, sin phone/email/consent.
+LEAD_READ_REQUIRED = {"id", "name", "phoneMasked", "source", "createdAt", "afterHours"}
+LEAD_READ_ALLOWED = LEAD_READ_REQUIRED | {"interest", "recommendedModels", "crmStatus"}
 
 
 def lead_payload(**overrides: Any) -> dict[str, Any]:
@@ -236,7 +239,7 @@ def test_list_leads_starts_empty(client: TestClient) -> None:
     assert response.json() == []
 
 
-def test_list_leads_returns_created_leads_in_order_with_masked_pii(client: TestClient) -> None:
+def test_list_leads_returns_lead_read_view_in_order_without_pii(client: TestClient) -> None:
     first = client.post("/leads", json=lead_payload()).json()
     second = client.post(
         "/leads",
@@ -246,15 +249,27 @@ def test_list_leads_returns_created_leads_in_order_with_masked_pii(client: TestC
     listed = client.get("/leads").json()
 
     assert [lead["id"] for lead in listed] == [first["id"], second["id"]]
-    assert listed[0]["phone"] == "09****4567"
-    assert listed[1]["phone"] == "09****4321"
-    assert listed[0]["email"] == "a***@example.com"
-    assert listed[1]["email"] == "l***@example.com"
+    assert listed[0]["phoneMasked"] == "09****4567"
+    assert listed[1]["phoneMasked"] == "09****4321"
     for lead in listed:
-        assert set(lead) >= LEAD_REQUIRED
+        # `LeadRead` es additionalProperties:false: ni teléfono, ni email, ni consent, ni sessionId.
+        assert LEAD_READ_REQUIRED <= set(lead) <= LEAD_READ_ALLOWED, lead
         assert None not in lead.values()
-    assert listed[0]["afterHours"] is False
+    assert listed[0]["name"] == "Ana Prueba"
+    assert listed[0]["source"] == "web"
+    assert listed[0]["interest"] == "Prueba de manejo del Dolphin"
     assert listed[0]["recommendedModels"] == ["dolphin", "seagull", "yuan-up"]
+    assert listed[0]["afterHours"] is False
+    assert listed[0]["crmStatus"] == "pushed"
+    assert listed[0]["createdAt"] == first["createdAt"]
+
+
+def test_list_leads_never_contains_a_full_phone_or_email(client: TestClient) -> None:
+    client.post("/leads", json=lead_payload())
+    raw = client.get("/leads").text
+    assert "0991234567" not in raw
+    assert "ana.prueba@example.com" not in raw
+    assert "09****4567" in raw
 
 
 def test_masking_on_read_does_not_alter_the_stored_lead(
@@ -264,7 +279,7 @@ def test_masking_on_read_does_not_alter_the_stored_lead(
     client.get("/leads")
     client.get("/leads")
     assert fake_crm.calls[0].phone == "0991234567"
-    assert client.get("/leads").json()[0]["phone"] == "09****4567"
+    assert client.get("/leads").json()[0]["phoneMasked"] == "09****4567"
 
 
 # ---------------------------------------------------------------- seguridad: logs y rate limit

@@ -14,9 +14,9 @@ from fastapi import Depends
 
 from app.adapters.crm import CrmDep, CrmPort
 from app.core.clock import ECUADOR_TZ, Clock, ClockDep
-from app.core.pii import mask_email, mask_phone
+from app.core.pii import mask_phone
 from app.repositories.memory import LeadRepo, LeadRepoDep
-from app.schemas.lead import CrmStatus, Lead, LeadCreate
+from app.schemas.lead import CrmStatus, Lead, LeadCreate, LeadRead
 
 log = logging.getLogger(__name__)
 
@@ -63,9 +63,23 @@ class LeadService:
         )
         return lead
 
-    def list_for_advisor(self) -> list[Lead]:
-        """Bandeja /asesor: teléfono y email enmascarados; el lead guardado no cambia."""
-        return [self._masked(lead) for lead in self._repo.list()]
+    def list_for_advisor(self) -> list[LeadRead]:
+        """Bandeja /asesor: vista `LeadRead` (teléfono enmascarado, sin email)."""
+        return [self.to_read_view(lead) for lead in self._repo.list()]
+
+    @staticmethod
+    def to_read_view(lead: Lead) -> LeadRead:
+        return LeadRead(
+            id=lead.id,
+            name=lead.name,
+            phone_masked=mask_phone(lead.phone),
+            source=lead.source,
+            interest=lead.interest,
+            recommended_models=lead.recommended_models,
+            created_at=lead.created_at,
+            after_hours=lead.after_hours,
+            crm_status=lead.crm_status,
+        )
 
     def _push_to_crm(self, lead: Lead) -> CrmStatus:
         try:
@@ -75,15 +89,6 @@ class LeadService:
             log.warning("crm push failed", extra={"leadId": lead.id, "error": type(exc).__name__})
             return CrmStatus.FAILED
         return CrmStatus.PUSHED
-
-    @staticmethod
-    def _masked(lead: Lead) -> Lead:
-        return lead.model_copy(
-            update={
-                "phone": mask_phone(lead.phone),
-                "email": mask_email(lead.email) if lead.email else None,
-            }
-        )
 
 
 def get_lead_service(repo: LeadRepoDep, crm: CrmDep, clock: ClockDep) -> LeadService:
