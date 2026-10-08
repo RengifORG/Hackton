@@ -12,12 +12,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.adapters.crm import build_crm
 from app.core.clock import Clock, SystemClock
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
 from app.core.ratelimit import setup_rate_limiting
 from app.repositories.catalog import CatalogRepo
-from app.routers import health, models
+from app.repositories.memory import LeadRepo
+from app.routers import health, leads, models
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +45,8 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
     )
     app.state.settings = settings
     app.state.clock = clock or SystemClock()
+    app.state.crm = build_crm(settings)
+    app.state.lead_repo = LeadRepo()
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
@@ -52,6 +56,7 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
     setup_rate_limiting(app)
     app.include_router(health.router)
     app.include_router(models.router)
+    app.include_router(leads.router)
     return app
 
 

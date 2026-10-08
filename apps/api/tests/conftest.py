@@ -1,17 +1,23 @@
-"""Fixtures compartidos: app con settings controlados (sin .env) y cliente de pruebas."""
+"""Fixtures compartidos: app con settings controlados (sin .env), reloj EC fijo y CRM fake."""
 
 from __future__ import annotations
 
 from collections.abc import Iterator
+from datetime import datetime
 from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.adapters.crm import FakeCrm, get_crm
+from app.core.clock import ECUADOR_TZ, FixedClock
 from app.core.config import DATA_DIR, Settings
 from app.core.ratelimit import limiter
 from app.main import create_app
+
+# Jueves 2026-10-08 10:00 en Ecuador: dentro del horario de oficina.
+OFFICE_HOURS_NOW = datetime(2026, 10, 8, 10, 0, tzinfo=ECUADOR_TZ)
 
 
 @pytest.fixture
@@ -29,9 +35,22 @@ def settings(tmp_path: Path) -> Settings:
 
 
 @pytest.fixture
-def app(settings: Settings) -> FastAPI:
+def clock() -> FixedClock:
+    """Reloj de la app; los tests lo mueven con `clock.set(...)`."""
+    return FixedClock(OFFICE_HOURS_NOW)
+
+
+@pytest.fixture
+def fake_crm() -> FakeCrm:
+    return FakeCrm()
+
+
+@pytest.fixture
+def app(settings: Settings, clock: FixedClock, fake_crm: FakeCrm) -> FastAPI:
     limiter.reset()
-    return create_app(settings)
+    application = create_app(settings, clock=clock)
+    application.dependency_overrides[get_crm] = lambda: fake_crm
+    return application
 
 
 @pytest.fixture

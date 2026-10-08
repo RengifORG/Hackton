@@ -1,6 +1,7 @@
 """Reloj inyectable en hora de Ecuador (America/Guayaquil).
 
-`afterHours` (H1) y las franjas (H4) dependen de la hora local; en tests se inyecta `FixedClock`.
+`afterHours` (H1) y las franjas (H4) dependen de la hora local; en tests se inyecta `FixedClock`
+con `create_app(settings, clock=...)`.
 """
 
 from __future__ import annotations
@@ -26,9 +27,12 @@ class SystemClock:
 
 
 class FixedClock:
-    """Reloj congelado para tests (p. ej. 19:00 EC → afterHours=True)."""
+    """Reloj congelado para tests (p. ej. 19:00 EC → afterHours=True). `set` lo mueve."""
 
     def __init__(self, fixed: datetime) -> None:
+        self.set(fixed)
+
+    def set(self, fixed: datetime) -> None:
         self._fixed = fixed if fixed.tzinfo else fixed.replace(tzinfo=ECUADOR_TZ)
 
     def now(self) -> datetime:

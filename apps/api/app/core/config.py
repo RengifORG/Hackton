@@ -28,8 +28,6 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     # Orígenes CORS separados por coma (front local + CloudFront por env).
     cors_origins: str = "http://localhost:5173"
-    # Límite por IP para /chat, /leads y /appointments (formato slowapi).
-    rate_limit: str = "20/minute"
     catalog_path: Path = DATA_DIR / "catalog.json"
     slots_path: Path = DATA_DIR / "slots.json"
     # LLM (F5): solo si USE_BEDROCK=1; nunca credenciales en código.
