@@ -18,6 +18,14 @@ const ecuadorClock = new Intl.DateTimeFormat('en-US', {
   hourCycle: 'h23',
 })
 
+const ecuadorClockWithSeconds = new Intl.DateTimeFormat('en-US', {
+  timeZone: ECUADOR_TIME_ZONE,
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+})
+
 export interface AdvisorKpis {
   leadsInInbox: number
   afterHours: number
@@ -168,4 +176,25 @@ export function formatTime(iso: string): string {
   const hour = parts.find((part) => part.type === 'hour')?.value ?? '00'
   const minute = parts.find((part) => part.type === 'minute')?.value ?? '00'
   return `${hour}:${minute}`
+}
+
+/** "HH:mm:ss" en hora de Ecuador. */
+export function formatClock(date: Date): string {
+  const parts = ecuadorClockWithSeconds.formatToParts(date)
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? '00'
+  return `${part('hour')}:${part('minute')}:${part('second')}`
+}
+
+/**
+ * Ids de `currentIds` que no estaban en `previousIds`.
+ * Sin `previousIds` (primera carga) no marca nada.
+ */
+export function markNewIds(
+  previousIds: Iterable<string> | null | undefined,
+  currentIds: Iterable<string>,
+): Set<string> {
+  if (!previousIds) return new Set()
+  const known = new Set(previousIds)
+  return new Set([...currentIds].filter((id) => !known.has(id)))
 }

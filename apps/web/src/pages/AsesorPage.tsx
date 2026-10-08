@@ -1,19 +1,29 @@
-import { KpiCard, Table, type Column } from '@/components/ui'
-import { useAdvisorInbox } from '@/features/reception/hooks/useAdvisorInbox'
+import { Badge, KpiCard, Table, type Column } from '@/components/ui'
+import {
+  useAdvisorInbox,
+  type AdvisorInboxRow,
+} from '@/features/reception/hooks/useAdvisorInbox'
 import { SOURCE_LABELS } from '@/features/reception/model/labels'
 import {
   describeAppointment,
   formatModelId,
-  type AdvisorRow,
 } from '@/features/reception/model/selectors'
 import { AfterHoursBadge } from '@/features/reception/ui/AfterHoursBadge'
 import { LeadDetailPanel } from '@/features/reception/ui/LeadDetailPanel'
+import { LiveStatus } from '@/features/reception/ui/LiveStatus'
 
-const COLUMNS: Column<AdvisorRow>[] = [
+const REFRESH_MS = 5000
+
+const COLUMNS: Column<AdvisorInboxRow>[] = [
   {
     key: 'name',
     header: 'Nombre',
-    render: ({ lead }) => <span className="font-medium">{lead.name}</span>,
+    render: ({ lead, isNew }) => (
+      <span className="flex flex-wrap items-center gap-2">
+        <span className="font-medium">{lead.name}</span>
+        {isNew && <Badge variant="success">Nuevo</Badge>}
+      </span>
+    ),
   },
   {
     key: 'phone',
@@ -58,11 +68,17 @@ const COLUMNS: Column<AdvisorRow>[] = [
 ]
 
 export function AsesorPage() {
-  const { status, kpis, rows, selected, select } = useAdvisorInbox()
+  const { status, kpis, rows, selected, select, lastUpdated, stale } =
+    useAdvisorInbox({ refreshMs: REFRESH_MS })
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
-      <h1 className="text-2xl font-bold text-slate-900">Bandeja del asesor</h1>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h1 className="text-2xl font-bold text-slate-900">
+          Bandeja del asesor
+        </h1>
+        <LiveStatus lastUpdated={lastUpdated} stale={stale} />
+      </div>
 
       {status === 'loading' && (
         <p role="status" className="text-slate-600">
