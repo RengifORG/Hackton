@@ -17,7 +17,7 @@ const UNVERIFIED_NOTE = '(dato por confirmar con un asesor)'
 const seenSessions = new Set<string>()
 
 const HOTSPOT_PATTERNS = {
-  wheels: /llanta|rueda|neumatico|rin/,
+  wheels: /llanta|rueda|neumatico|\brin(es)?\b/,
   seats: /asiento|interior/,
   screen: /pantalla|infotainment/,
   battery: /bateria|autonomia|carga/,

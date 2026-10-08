@@ -64,6 +64,18 @@ describe('chat contra el mock (H3)', () => {
     expect(response.reply).toBe('No tengo ese dato, un asesor te confirma.')
   })
 
+  it('"principal" no se confunde con el hotspot wheels (rin)', async () => {
+    const sessionId = 'session-principal-01'
+    await api.chat({ sessionId, message: 'Hola' })
+
+    const response = await api.chat({
+      sessionId,
+      message: '¿cuál es la característica principal?',
+    })
+
+    expect(response.hotspot).toBeUndefined()
+  })
+
   it('POST /chat con message vacío responde 422', async () => {
     const response = await postJson('/chat', {
       sessionId: 'session-vacio-0001',
