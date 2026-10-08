@@ -1,4 +1,6 @@
 import { Html } from '@react-three/drei'
+import type { RefObject } from 'react'
+import type { Object3D } from 'three'
 import type { Hotspot } from '@/lib/api/types'
 import type { Vec3 } from '../model/camera'
 
@@ -7,6 +9,7 @@ interface HotspotMarkerProps {
   label: string
   position: Vec3
   active: boolean
+  occluders: RefObject<Object3D>[]
   onSelect: (id: Hotspot) => void
 }
 
@@ -15,10 +18,11 @@ export function HotspotMarker({
   label,
   position,
   active,
+  occluders,
   onSelect,
 }: HotspotMarkerProps) {
   return (
-    <Html position={position} center zIndexRange={[10, 0]}>
+    <Html position={position} center zIndexRange={[10, 0]} occlude={occluders}>
       <button
         type="button"
         aria-label={label}
