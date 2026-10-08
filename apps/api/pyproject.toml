@@ -1,0 +1,34 @@
+[project]
+name = "byd-lead-agent-api"
+version = "0.1.0"
+description = "BYD Ecuador — API del agente de leads 24/7 (FastAPI). Cumple docs/openapi.yaml."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3>=1.43.109",
+    "fastapi>=0.143.0",
+    "httpx>=0.28.1",
+    "pydantic>=2.14.0",
+    "pydantic-settings>=2.15.0",
+    "slowapi>=0.1.10",
+    # tzdata: ZoneInfo("America/Guayaquil") no tiene base de zonas del sistema en Windows.
+    "tzdata>=2026.5",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    # httpx2: Starlette >=1.7 lo usa en TestClient (con httpx solo emite DeprecationWarning).
+    "httpx2>=2.13.1",
+    "hypothesis>=6.168.5",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.10",
+    "schemathesis>=4.30.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+addopts = "-ra"
