@@ -104,3 +104,19 @@ Fuera de esto, **no toco tu contrato**. Si algo del contrato no calza al impleme
 - Plan detallado de la API acoplado a tu contrato (fases F0–F7, tests por CA, DoD): `docs/` del cerebro → `2026-10-08__plan-desarrollo-api__acoplado-repo-esteban.md`.
 - Rúbrica y guía AWS (PDFs del organizador): `C:\Hackaton\cerebro\` (te los paso).
 - Decisiones registradas (ADRs y log): `C:\Hackaton\cerebro\hackton\02-decisiones\`.
+
+## 9. Respuestas de Esteban (2026-10-08) y cambios de contrato v0.2.0
+
+1. Roles confirmados: Esteban T1+T2 (web), Alexionix T3 (api). Aprobaciones cruzadas (Esteban aprueba `apps/api`, Alex aprueba `apps/web`).
+2. **A: OK.** Texto en el chat + campo opcional `Appointment.loyaltyNote` ya incluido en v0.2.0.
+3. **B: OK.** Bedrock con `FakeLlm` y fallback.
+4. **C: OK.** La API genera `data/slots.json`. Los mocks MSW de T2 usan fixtures propias hasta que exista.
+5. **D:** Alex abre la sandbox (solo Bedrock por ahora), región `us-east-1`. La web se sirve local en la demo; CloudFront solo si sobra tiempo.
+6. `.glb` listo: `apps/web/public/models/dolphin.glb` (proxy BYD Seagull, CC BY-NC-SA, créditos en `CREDITS.md`).
+7. Pitch: Esteban abre (problema + 3D + chat), Alex cierra (bandejas + "real vs simulado" + métrica).
+
+### Contrato v0.2.0 (este PR) — hallazgos resueltos
+- **C1 (alta):** `GET /leads` → nuevo schema `LeadRead` con `phoneMasked` (`^09\*{4}\d{4}$`). `POST /leads` sigue devolviendo `Lead`.
+- **C2 (alta):** `Lead` y `Appointment` ya no usan `allOf` sobre schemas `additionalProperties:false` (JSON Schema estricto rechazaba `id`, `status`, `slot`…; schemathesis habría fallado). Ahora son objetos explícitos.
+- **C3 (media):** `leadPhoneMasked` con `pattern`; `loyaltyNote?` opcional en `Appointment`.
+- Pendiente para la API: `data/slots.json` (decisión C).

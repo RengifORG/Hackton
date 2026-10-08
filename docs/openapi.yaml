@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: BYD Ecuador Lead Agent API
-  version: 0.1.0
+  version: 0.2.0
   description: Contrato único entre web (React) y api (FastAPI). Cambios solo vía PR etiquetado `contract`.
 servers:
   - url: http://localhost:8000
@@ -53,14 +53,14 @@ paths:
         "429": { $ref: "#/components/responses/RateLimited" }
     get:
       operationId: listLeads
-      description: Solo para mockup de asesor. En prod requeriría auth.
+      description: Solo para mockup de asesor. En prod requeriría auth. Nunca expone el teléfono completo.
       responses:
         "200":
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: "#/components/schemas/Lead" }
+                items: { $ref: "#/components/schemas/LeadRead" }
 
   /recommendations:
     post:
@@ -200,15 +200,37 @@ components:
         consent: { type: boolean, const: true }
         sessionId: { type: string }
     Lead:
-      allOf:
-        - $ref: "#/components/schemas/LeadCreate"
-        - type: object
-          required: [id, createdAt, afterHours]
-          properties:
-            id: { type: string }
-            createdAt: { type: string, format: date-time }
-            afterHours: { type: boolean }
-            crmStatus: { type: string, enum: [pending, pushed, failed] }
+      description: Respuesta de POST /leads. Objeto explícito (no allOf) porque LeadCreate es additionalProperties:false.
+      type: object
+      required: [id, name, phone, source, consent, createdAt, afterHours]
+      properties:
+        id: { type: string }
+        name: { type: string, minLength: 2, maxLength: 80 }
+        phone: { type: string, pattern: "^(\\+593|0)9\\d{8}$" }
+        email: { type: string, format: email }
+        source: { type: string, enum: [web, whatsapp] }
+        interest: { type: string, maxLength: 200 }
+        recommendedModels: { type: array, items: { type: string }, maxItems: 3 }
+        consent: { type: boolean, const: true }
+        sessionId: { type: string }
+        createdAt: { type: string, format: date-time }
+        afterHours: { type: boolean }
+        crmStatus: { type: string, enum: [pending, pushed, failed] }
+    LeadRead:
+      description: Vista de lectura para asesores. Teléfono siempre enmascarado (09****1234).
+      type: object
+      additionalProperties: false
+      required: [id, name, phoneMasked, source, createdAt, afterHours]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        phoneMasked: { type: string, pattern: "^09\\*{4}\\d{4}$", example: "09****1234" }
+        source: { type: string, enum: [web, whatsapp] }
+        interest: { type: string, maxLength: 200 }
+        recommendedModels: { type: array, items: { type: string }, maxItems: 3 }
+        createdAt: { type: string, format: date-time }
+        afterHours: { type: boolean }
+        crmStatus: { type: string, enum: [pending, pushed, failed] }
     Recommendation:
       type: object
       required: [modelId, name, price, reason]
@@ -256,14 +278,19 @@ components:
         vehicle: { type: string, maxLength: 80 }
         notes: { type: string, maxLength: 300 }
     Appointment:
-      allOf:
-        - $ref: "#/components/schemas/AppointmentCreate"
-        - type: object
-          required: [id, status, createdAt, slot]
-          properties:
-            id: { type: string }
-            status: { type: string, enum: [confirmed, cancelled] }
-            createdAt: { type: string, format: date-time }
-            slot: { $ref: "#/components/schemas/Slot" }
-            leadName: { type: string }
-            leadPhoneMasked: { type: string }
+      description: Objeto explícito (no allOf) porque AppointmentCreate es additionalProperties:false.
+      type: object
+      required: [id, leadId, type, slotId, status, createdAt, slot]
+      properties:
+        id: { type: string }
+        leadId: { type: string }
+        type: { $ref: "#/components/schemas/AppointmentType" }
+        slotId: { type: string }
+        vehicle: { type: string, maxLength: 80 }
+        notes: { type: string, maxLength: 300 }
+        status: { type: string, enum: [confirmed, cancelled] }
+        createdAt: { type: string, format: date-time }
+        slot: { $ref: "#/components/schemas/Slot" }
+        leadName: { type: string }
+        leadPhoneMasked: { type: string, pattern: "^09\\*{4}\\d{4}$", example: "09****1234" }
+        loyaltyNote: { type: string, maxLength: 200, description: "Decisión A: línea de cashback SmartClub/Farmaenlace en citas service (opcional)." }
