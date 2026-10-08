@@ -105,4 +105,13 @@ describe('buildAppointments', () => {
       expect(appointment.notes).toBeTruthy()
     }
   })
+
+  it('exactamente 1 cita service lleva el beneficio SmartClub (reto 1)', () => {
+    const withLoyalty = appointments.filter((a) => a.loyaltyNote !== undefined)
+    expect(withLoyalty).toHaveLength(1)
+    expect(withLoyalty[0]?.type).toBe('service')
+    expect(withLoyalty[0]?.loyaltyNote).toBe(
+      'Acumulas cashback SmartClub canjeable en Farmaenlace',
+    )
+  })
 })
