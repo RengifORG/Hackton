@@ -47,6 +47,7 @@ export const AppointmentSchema = z.strictObject({
   slot: SlotSchema,
   leadName: z.string().optional(),
   leadPhoneMasked: PhoneMaskedSchema.optional(),
+  loyaltyNote: z.string().max(200).optional(),
 })
 
 // Guardas de contrato: `tsc -b` falla si un esquema zod se desvía del tipo
