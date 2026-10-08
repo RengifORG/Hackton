@@ -37,7 +37,13 @@ Copia `.env.example` a `.env` (ignorado por git). Ninguna es obligatoria para ar
 - **F1** · H1 leads: `POST /leads` (201, `afterHours` en hora de Ecuador, entrega al CRM, 20/min por IP → 429) y `GET /leads` (bandeja del asesor, vista `LeadRead` con teléfono enmascarado; contrato v0.2.0). ✅
 - **F2** · H4 citas: `GET /availability?type&date` desde `data/slots.json` (lo genera la API) y `POST /appointments` (201, 404 lead/franja, 409 franja ocupada, 20/min → 429) con `GET /appointments?type`. ✅
 - **F3** · H3 chat determinista: `POST /chat` con saludo + aviso LOPDP, intención por palabras clave, CONTACTO (nombre + celular + consentimiento explícito → lead) antes de CITA (franjas numeradas → cita), detalle solo con datos del catálogo y `hotspot` por sinónimos, 20/min → 429. ✅
-- F4 recomendaciones · F5 Bedrock · F6 conformidad y entrega: pendientes.
+- **F4** · H2 recomendaciones: `POST /recommendations` con parser del perfil (uso, pasajeros, presupuesto, cargador) y scoring determinista del `decision-tree.md`; exactamente 3 modelos del catálogo con razón ≤ 200. El chat lo usa en la etapa de perfil. ✅
+- F5 Bedrock · F6 conformidad y entrega: pendientes.
+
+## Recomendaciones (H2)
+- `puntaje = cercanía al presupuesto ×3 + match de idealFor (uso, pasajeros, "sin cargador") ×2 + 3 si no hay cargador en casa y el modelo es híbrido enchufable`. Desempate: precio menor, orden del catálogo.
+- Presupuesto admite `30k`, `30 mil`, `$25.000`, `25,000`; un rango ("entre 25k y 35k") se promedia. Sin presupuesto, manda el `idealFor`.
+- En F5 el LLM propondrá ids por tool use; este servicio los valida contra el catálogo y, si fallan, aplica este scoring (CA2.2/CA2.3).
 
 ## Chat (H3)
 - Máquina de estados (`app/services/chat_service.py`): `start → contact → slot → done`, más `profile` (perfil para recomendar) y `detail` (ficha del modelo). El primer mensaje de cada `sessionId` incluye el aviso LOPDP.

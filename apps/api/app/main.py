@@ -21,7 +21,7 @@ from app.core.logging import configure_logging
 from app.core.ratelimit import setup_rate_limiting
 from app.repositories.catalog import CatalogRepo
 from app.repositories.memory import AppointmentRepo, LeadRepo, SessionRepo
-from app.routers import appointments, availability, chat, health, leads, models
+from app.routers import appointments, availability, chat, health, leads, models, recommendations
 
 log = logging.getLogger(__name__)
 
@@ -71,6 +71,7 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
     app.include_router(availability.router)
     app.include_router(appointments.router)
     app.include_router(chat.router)
+    app.include_router(recommendations.router)
     return app
 
 

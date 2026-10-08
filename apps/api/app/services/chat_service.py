@@ -36,6 +36,7 @@ from app.services.appointment_service import (
     SlotTakenError,
 )
 from app.services.lead_service import LeadService, LeadServiceDep
+from app.services.recommendation_service import RecommendationService, RecommendationServiceDep
 
 log = logging.getLogger(__name__)
 
@@ -52,10 +53,6 @@ HELP = (
 PROFILE_QUESTIONS = (
     "Para recomendarte 3 modelos cuéntame: ¿uso principal (ciudad, carretera o trabajo)? "
     "¿cuántos pasajeros? ¿presupuesto aproximado en USD? ¿puedes cargar en casa o en el trabajo?"
-)
-PROFILE_THANKS = (
-    "¡Gracias! Pulsa «Recomiéndame» para ver tus 3 modelos, o dime si prefieres agendar "
-    "una prueba de manejo."
 )
 NO_DATA = "No tengo ese dato, un asesor te confirma."
 ASK_TYPE = "¿Prefieres una prueba de manejo o una cita de taller?"
@@ -418,12 +415,14 @@ class ChatService:
         catalog: CatalogRepo,
         leads: LeadService,
         appointments: AppointmentService,
+        recommendations: RecommendationService,
         clock: Clock,
     ) -> None:
         self._sessions = sessions
         self._catalog = catalog
         self._leads = leads
         self._appointments = appointments
+        self._recommendations = recommendations
         self._clock = clock
 
     def handle(self, request: ChatRequest, *, known_phone: str | None = None) -> ChatResponse:
@@ -471,11 +470,7 @@ class ChatService:
             "leave_contact",
         ):
             # La respuesta al perfil puede mencionar "carga" o "modelos": no es otra intención.
-            session.profile["text"] = message[:500]
-            session.stage = Stage.START
-            return Turn(
-                PROFILE_THANKS, [SuggestedAction.RECOMMEND, SuggestedAction.BOOK_TEST_DRIVE]
-            )
+            return self._recommend(session, message)
         if norm in SMALL_TALK:
             return None
         return self._handle_intent(session, norm)
@@ -505,6 +500,23 @@ class ChatService:
         if intent == "book_generic":
             return Turn(ASK_TYPE, [SuggestedAction.BOOK_TEST_DRIVE, SuggestedAction.BOOK_SERVICE])
         return None
+
+    def _recommend(self, session: ChatSession, profile_text: str) -> Turn:
+        """PERFIL → 3 modelos con razón (H2); los ids quedan en la sesión para el lead."""
+        items = self._recommendations.recommend(profile_text)
+        session.profile["text"] = profile_text[:500]
+        session.profile["recommended"] = ",".join(item.model_id for item in items)
+        session.stage = Stage.START
+        lines = "\n".join(f"{i}. {item.name}: {item.reason}" for i, item in enumerate(items, 1))
+        return Turn(
+            f"Con tu perfil te recomiendo:\n{lines}\n\n"
+            "¿Quieres ver el Dolphin en 3D, agendar una prueba de manejo o dejar tus datos?",
+            [
+                SuggestedAction.VIEW_3D,
+                SuggestedAction.BOOK_TEST_DRIVE,
+                SuggestedAction.LEAVE_CONTACT,
+            ],
+        )
 
     def _detail(self, session: ChatSession, norm: str) -> Turn:
         session.stage = Stage.DETAIL
@@ -598,6 +610,8 @@ class ChatService:
         )
 
     def _create_lead(self, session: ChatSession) -> Turn:
+        recommended = session.profile.get("recommended")
+        extra = {"recommended_models": recommended.split(",")} if recommended else {}
         try:
             data = LeadCreate(
                 name=session.pending_name or "",
@@ -606,6 +620,7 @@ class ChatService:
                 interest=INTEREST_LABEL[session.pending_type],
                 consent=True,
                 session_id=session.session_id,
+                **extra,
             )
         except ValidationError:
             session.pending_name = session.pending_phone = None
@@ -702,7 +717,10 @@ def build_chat_service(state: Any) -> ChatService:
         state.workshop,
         state.clock,
     )
-    return ChatService(state.session_repo, state.catalog_repo, leads, appointments, state.clock)
+    recommendations = RecommendationService(state.catalog_repo)
+    return ChatService(
+        state.session_repo, state.catalog_repo, leads, appointments, recommendations, state.clock
+    )
 
 
 def get_chat_service(
@@ -710,9 +728,10 @@ def get_chat_service(
     catalog: CatalogDep,
     leads: LeadServiceDep,
     appointments: AppointmentServiceDep,
+    recommendations: RecommendationServiceDep,
     clock: ClockDep,
 ) -> ChatService:
-    return ChatService(sessions, catalog, leads, appointments, clock)
+    return ChatService(sessions, catalog, leads, appointments, recommendations, clock)
 
 
 ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]

@@ -286,6 +286,24 @@ def test_second_appointment_in_same_session_reuses_the_lead(client: TestClient) 
     assert [a["type"] for a in client.get("/appointments").json()] == ["test_drive", "service"]
 
 
+def test_profile_flow_recommends_three_models_and_remembers_them(client: TestClient) -> None:
+    sid = "sess-flow-profile"
+    questions = chat(client, sid, "¿cuál me conviene?")
+    assert "uso principal" in questions["reply"].lower()
+    assert questions["suggestedActions"] == ["recommend"]
+
+    body = chat(client, sid, "familia de 4, ciudad, presupuesto 30k, sí puedo cargar en casa")
+    assert "1. BYD Yuan Up" in body["reply"]
+    assert "2. BYD Dolphin 2027" in body["reply"]
+    assert "3. BYD Song Plus" in body["reply"]
+    assert "view_3d" in body["suggestedActions"] and "book_test_drive" in body["suggestedActions"]
+
+    chat(client, sid, "quiero una prueba de manejo")
+    chat(client, sid, "Ana Prueba 0991234567 acepto")
+    lead = client.get("/leads").json()[0]
+    assert lead["recommendedModels"] == ["yuan-up", "dolphin", "song-plus"]
+
+
 def test_generic_booking_request_asks_for_the_type(client: TestClient) -> None:
     body = chat(client, "sess-generic-01", "quiero agendar una cita")
     assert set(body["suggestedActions"]) == {"book_test_drive", "book_service"}

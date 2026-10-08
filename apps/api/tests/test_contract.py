@@ -68,7 +68,26 @@ def test_f0_to_f2_operations_are_implemented(client: TestClient) -> None:
         "createAppointment",
         "listAppointments",
         "chat",
+        "recommend",
     }
+
+
+def test_recommendations_response_matches_contract_schema(
+    client: TestClient, contract: dict[str, Any]
+) -> None:
+    body = client.post("/recommendations", json={"profile": "familia de 4, ciudad, 30k"}).json()
+    schema = contract["paths"]["/recommendations"]["post"]["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]
+    root = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        **schema,
+        "components": contract["components"],
+    }
+    errors = [f"{e.instance_path}: {e.message}" for e in jsonschema_rs.iter_errors(root, body)]
+    assert errors == [], errors
+    for item in body["items"]:
+        assert_matches_schema(contract, "Recommendation", item)
 
 
 def test_chat_responses_match_contract_schemas(
