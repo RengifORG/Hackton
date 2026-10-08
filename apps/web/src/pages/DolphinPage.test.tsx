@@ -33,4 +33,21 @@ describe('DolphinPage', () => {
     ).toBeInTheDocument()
     expect(screen.getAllByRole('button')).toHaveLength(6)
   })
+
+  it('el visor ocupa el alto disponible y el panel va después (debajo en móvil)', async () => {
+    render(
+      <MemoryRouter>
+        <DolphinPage />
+      </MemoryRouter>,
+    )
+
+    const viewer = screen.getByRole('region', { name: 'Visor 3D' })
+    const panel = screen.getByRole('complementary', { name: 'Asesor virtual' })
+    await screen.findByText('Tu navegador no soporta 3D')
+
+    expect(viewer).toHaveClass('h-[calc(100dvh-3.5rem)]', 'w-full')
+    expect(
+      viewer.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
 })

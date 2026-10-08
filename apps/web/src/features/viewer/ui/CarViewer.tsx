@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from 'react'
 import { isWebGLAvailable } from '../model/webgl'
 import { ErrorBoundary } from './ErrorBoundary'
 import type { ViewerProps } from './types'
+import { ViewControls } from './ViewControls'
 import { ViewerFallback } from './ViewerFallback'
 
 // three/fiber/drei van en un chunk aparte: solo se descargan si hay WebGL.
@@ -30,7 +31,10 @@ export function CarViewer({
       <Suspense
         fallback={<p className="p-4 text-sm text-slate-500">Cargando 3D…</p>}
       >
-        <ViewerCanvas model={model} onHotspotSelect={onHotspotSelect} />
+        <div className="relative h-full w-full">
+          <ViewerCanvas model={model} onHotspotSelect={onHotspotSelect} />
+          <ViewControls />
+        </div>
       </Suspense>
     </ErrorBoundary>
   )
