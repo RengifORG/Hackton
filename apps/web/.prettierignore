@@ -3,3 +3,4 @@ dist
 coverage
 public
 src/lib/api/schema.d.ts
+.claude
