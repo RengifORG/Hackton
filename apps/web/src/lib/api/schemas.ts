@@ -1,7 +1,12 @@
 import { z } from 'zod'
 import type { Assert, MatchesContract } from './contract'
 import type { components, paths } from './schema'
-import { chatResponseSuggestedActionsValues, hotspotValues } from './schema'
+import {
+  chatResponseSuggestedActionsValues,
+  hotspotValues,
+  leadCreateSourceValues,
+  leadCrmStatusValues,
+} from './schema'
 
 type ApiSchemas = components['schemas']
 type HotspotPoint = NonNullable<ApiSchemas['Model']['hotspots']>[number]
@@ -33,6 +38,29 @@ export const ModelSummarySchema = z.object({
 export const ModelSchema = ModelSummarySchema.extend({
   specs: z.record(z.string(), z.unknown()).optional(),
   hotspots: z.array(HotspotPointSchema).optional(),
+})
+
+// openapi-typescript no genera regex: leads.test.ts verifica que este patrón
+// sea idéntico al de LeadCreate.phone en docs/openapi.yaml.
+export const PHONE_EC_PATTERN = /^(\+593|0)9\d{8}$/
+
+export const LeadCreateSchema = z.strictObject({
+  name: z.string().min(2).max(80),
+  phone: z.string().regex(PHONE_EC_PATTERN),
+  email: z.email().optional(),
+  source: z.enum(leadCreateSourceValues),
+  interest: z.string().max(200).optional(),
+  recommendedModels: z.array(z.string()).max(3).optional(),
+  consent: z.literal(true),
+  sessionId: z.string().optional(),
+})
+
+export const LeadSchema = z.object({
+  ...LeadCreateSchema.shape,
+  id: z.string(),
+  createdAt: z.iso.datetime({ offset: true }),
+  afterHours: z.boolean(),
+  crmStatus: z.enum(leadCrmStatusValues).optional(),
 })
 
 export const ChatRequestSchema = z.strictObject({
@@ -76,6 +104,8 @@ export type ContractChecks = [
     MatchesContract<typeof ModelSummarySchema, ApiSchemas['ModelSummary']>
   >,
   Assert<MatchesContract<typeof ModelSchema, ApiSchemas['Model']>>,
+  Assert<MatchesContract<typeof LeadCreateSchema, ApiSchemas['LeadCreate']>>,
+  Assert<MatchesContract<typeof LeadSchema, ApiSchemas['Lead']>>,
   Assert<MatchesContract<typeof ChatRequestSchema, ApiSchemas['ChatRequest']>>,
   Assert<
     MatchesContract<typeof ChatResponseSchema, ApiSchemas['ChatResponse']>

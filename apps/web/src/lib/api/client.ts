@@ -4,6 +4,7 @@ import { env } from '@/lib/env'
 import type { paths } from './schema'
 import {
   ChatResponseSchema,
+  LeadSchema,
   ModelSchema,
   ModelSummarySchema,
   RecommendationsResponseSchema,
@@ -11,6 +12,8 @@ import {
 import type {
   ChatRequest,
   ChatResponse,
+  Lead,
+  LeadCreate,
   Model,
   ModelSummary,
   Recommendation,
@@ -75,6 +78,12 @@ export function createApiClient(baseUrl: string) {
       })
       ensureOk(response, 'POST /recommendations')
       return RecommendationsResponseSchema.parse(data).items
+    },
+
+    async createLead(body: LeadCreate): Promise<Lead> {
+      const { data, response } = await client.POST('/leads', { body })
+      ensureOk(response, 'POST /leads')
+      return LeadSchema.parse(data)
     },
   }
 }
