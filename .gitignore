@@ -23,3 +23,4 @@ Thumbs.db
 
 # 3d assets grandes van por LFS o se referencian
 *.blend
+assets/3d-src/*.glb
