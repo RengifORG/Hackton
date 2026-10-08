@@ -153,18 +153,20 @@ def test_full_test_drive_flow_in_five_turns_creates_one_lead_and_one_appointment
     assert leads[0]["source"] == "web"
     assert fake_crm.calls[0].session_id == sid
     assert fake_crm.calls[0].consent is True
-    assert "1." in t4["reply"] and "6." in t4["reply"] and "7." not in t4["reply"]
+    assert "09:00" in t4["reply"] and "16:00" in t4["reply"]  # todas las horas libres del día
+    assert "¿A qué hora te queda bien?" in t4["reply"]
+    assert "1." not in t4["reply"]  # sin menú numerado
     assert "09/10" in t4["reply"]  # próximo día hábil (viernes)
     assert "Quito Norte" in t4["reply"]
     assert client.get("/appointments").json() == []
 
-    t5 = chat(client, sid, "2")
+    t5 = chat(client, sid, "a las 10")
     appointments = client.get("/appointments").json()
     assert len(appointments) == 1
     assert appointments[0]["type"] == "test_drive"
     assert appointments[0]["slotId"] == "td-2026-10-09-10"
     assert appointments[0]["leadId"] == leads[0]["id"]
-    assert "09/10 10:00" in t5["reply"]
+    assert "viernes 09/10 a las 10:00" in t5["reply"]
     assert "Quito Norte" in t5["reply"]
     assert "asesor te contactará en horario de oficina" in t5["reply"]
     assert "Farmaenlace" not in t5["reply"]
@@ -177,11 +179,11 @@ def test_service_flow_confirms_with_farmaenlace_cashback_line(client: TestClient
     chat(client, sid, "necesito mantenimiento para mi auto")
     chat(client, sid, "Luis Demo 0987654321, acepto")  # consentimiento en el mismo mensaje
     assert len(client.get("/leads").json()) == 1
-    offered = chat(client, sid, "¿cuáles franjas hay?")  # no es un número: re-pregunta
+    offered = chat(client, sid, "¿cuáles franjas hay?")  # sin día ni hora: re-pregunta
     assert client.get("/appointments").json() == []
-    assert "número" in offered["reply"].lower()
+    assert "¿a qué hora" in offered["reply"].lower()
 
-    final = chat(client, sid, "1")
+    final = chat(client, sid, "a las 9 de la mañana")
 
     appointments = client.get("/appointments").json()
     assert [a["type"] for a in appointments] == ["service"]
@@ -224,11 +226,11 @@ def test_invalid_slot_choice_re_asks_and_creates_nothing(client: TestClient) -> 
     sid = "sess-flow-slot-bad"
     chat(client, sid, "prueba de manejo")
     chat(client, sid, "Ana Prueba 0991234567 acepto")
-    for bad in ("9", "mañana", "0"):
+    for bad in ("no sé", "a las 8 de la noche", "0"):
         body = chat(client, sid, bad)
-        assert "número" in body["reply"].lower()
+        assert "09:00" in body["reply"]  # vuelve a ofrecer las horas libres
     assert client.get("/appointments").json() == []
-    chat(client, sid, "3")
+    chat(client, sid, "11 am")
     assert client.get("/appointments").json()[0]["slotId"] == "td-2026-10-09-11"
 
 
@@ -246,12 +248,13 @@ def test_slot_taken_meanwhile_is_reoffered(client: TestClient) -> None:
     )
     assert taken.status_code == 201
 
-    body = chat(client, sid, "1")
+    body = chat(client, sid, "a las 9")
 
     assert "ocup" in body["reply"].lower()
     assert "td-2026-10-09-09" not in body["reply"]
     assert len(client.get("/appointments").json()) == 1
-    body = chat(client, sid, "1")  # la nueva lista empieza en la 10:00
+    assert "libre a las 10:00, 11:00" in body["reply"]  # la 09:00 ya no se ofrece
+    body = chat(client, sid, "10")  # sin am/pm, 10 = 10:00
     assert client.get("/appointments").json()[1]["slotId"] == "td-2026-10-09-10"
 
 
@@ -278,10 +281,10 @@ def test_second_appointment_in_same_session_reuses_the_lead(client: TestClient) 
     sid = "sess-flow-two"
     chat(client, sid, "prueba de manejo")
     chat(client, sid, "Ana Prueba 0991234567 acepto")
-    chat(client, sid, "1")
+    chat(client, sid, "a las 9")
     body = chat(client, sid, "ahora quiero una cita de taller")
-    assert "1." in body["reply"]  # ofrece franjas directamente, sin pedir datos otra vez
-    chat(client, sid, "1")
+    assert "¿A qué hora" in body["reply"]  # ofrece horas directamente, sin pedir datos
+    chat(client, sid, "a las 9")
     assert len(client.get("/leads").json()) == 1
     assert [a["type"] for a in client.get("/appointments").json()] == ["test_drive", "service"]
 
@@ -359,7 +362,7 @@ def test_chat_flow_never_sends_pii_to_logs(
     with caplog.at_level(logging.DEBUG):
         chat(client, sid, "prueba de manejo")
         chat(client, sid, "Ana Prueba 0991234567 acepto")
-        chat(client, sid, "1")
+        chat(client, sid, "a las 9")
     assert caplog.records
     for record in caplog.records:
         dumped = record.getMessage() + repr(vars(record))
