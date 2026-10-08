@@ -739,8 +739,10 @@ def build_chat_service(state: Any) -> ChatService:
     """Construye el servicio desde `app.state` (para canales fuera del ciclo request, p. ej. F7)."""
     from app.services.appointment_service import AppointmentService as _AppointmentService
     from app.services.lead_service import LeadService as _LeadService
+    from app.services.notify_service import WhatsAppNotifier
 
-    leads = _LeadService(state.lead_repo, state.crm, state.clock)
+    notifier = WhatsAppNotifier(getattr(state, "whatsapp", None))
+    leads = _LeadService(state.lead_repo, state.crm, state.clock, notifier)
     appointments = _AppointmentService(
         state.slots_repo,
         state.appointment_repo,
@@ -748,6 +750,7 @@ def build_chat_service(state: Any) -> ChatService:
         state.crm,
         state.workshop,
         state.clock,
+        notifier,
     )
     llm = getattr(state, "llm", None)
     recommendations = RecommendationService(state.catalog_repo, llm)

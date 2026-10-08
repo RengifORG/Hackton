@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     demo_now: datetime | None = None
     # CRM (F1): si falta, se usa FakeCrm.
     hubspot_token: SecretStr | None = None
+    # WhatsApp saliente (F7a, Meta Cloud API): solo con WHATSAPP_ENABLED=1 + token + phone id.
+    whatsapp_enabled: bool = False
+    whatsapp_token: SecretStr | None = None
+    whatsapp_phone_number_id: str | None = None
+    whatsapp_api_version: str = "v25.0"
 
     @property
     def cors_origin_list(self) -> list[str]:

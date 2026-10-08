@@ -22,6 +22,16 @@ def mask_phone(phone: str) -> str:
     return f"{digits[:2]}****{digits[-4:]}"
 
 
+def to_wa_digits(phone: str) -> str:
+    """Celular EC → formato WhatsApp sin `+`: `0991234567` / `+593991234567` → `593991234567`."""
+    digits = _NON_DIGITS_RE.sub("", phone)
+    if digits.startswith("593"):
+        return digits
+    if digits.startswith("0"):
+        return "593" + digits[1:]
+    return digits
+
+
 def redact_free_text(text: str) -> str:
     """Texto libre del usuario antes de ir a un LLM: teléfono, email y cédula → marcadores."""
     text = _EMAIL_RE.sub("{EMAIL}", text)
