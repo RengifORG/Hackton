@@ -2,5 +2,5 @@ pnpm-lock.yaml
 dist
 coverage
 public
-src/lib/api/schema.d.ts
+src/lib/api/schema.ts
 .claude

@@ -524,3 +524,20 @@ export interface operations {
         };
     };
 }
+type FlattenedDeepRequired<T> = {
+    [K in keyof T]-?: FlattenedDeepRequired<T[K] extends unknown[] | undefined | null ? Extract<T[K], unknown[]>[number] : T[K]>;
+};
+type ReadonlyArray<T> = [
+    Exclude<T, undefined>
+] extends [
+    unknown[]
+] ? Readonly<Exclude<T, undefined>> : Readonly<Exclude<T, undefined>[]>;
+export const appointmentTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AppointmentType"]> = ["test_drive", "service"];
+export const hotspotValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Hotspot"]> = ["wheels", "seats", "screen", "battery", "trunk", "lights"];
+export const leadCreateSourceValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["LeadCreate"]["source"]> = ["web", "whatsapp"];
+export const leadSourceValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Lead"]["source"]> = ["web", "whatsapp"];
+export const leadCrmStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Lead"]["crmStatus"]> = ["pending", "pushed", "failed"];
+export const leadReadSourceValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["LeadRead"]["source"]> = ["web", "whatsapp"];
+export const leadReadCrmStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["LeadRead"]["crmStatus"]> = ["pending", "pushed", "failed"];
+export const chatResponseSuggestedActionsValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChatResponse"]["suggestedActions"]> = ["recommend", "leave_contact", "book_test_drive", "book_service", "view_3d"];
+export const appointmentStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Appointment"]["status"]> = ["confirmed", "cancelled"];

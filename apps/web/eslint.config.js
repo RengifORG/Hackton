@@ -12,7 +12,7 @@ export default defineConfig([
     'coverage',
     'public/**',
     '.claude/**',
-    'src/lib/api/schema.d.ts',
+    'src/lib/api/schema.ts',
   ]),
   {
     files: ['**/*.{ts,tsx}'],
