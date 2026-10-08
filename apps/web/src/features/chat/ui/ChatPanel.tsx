@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { LeadForm } from '@/features/lead'
 import { selectSuggestedActions, useChatStore } from '../model/chatStore'
 import { ACTION_LABELS, LOPDP_NOTICE } from '../model/prompts'
 
@@ -8,6 +9,7 @@ export function ChatPanel() {
   const actions = useChatStore(selectSuggestedActions)
   const ask = useChatStore((state) => state.ask)
   const runAction = useChatStore((state) => state.runAction)
+  const leadFormOpen = useChatStore((state) => state.leadFormOpen)
   const [draft, setDraft] = useState('')
   const sending = status === 'sending'
 
@@ -59,6 +61,8 @@ export function ChatPanel() {
           ))}
         </div>
       )}
+
+      {leadFormOpen && <LeadForm />}
 
       <form
         onSubmit={onSubmit}
