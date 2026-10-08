@@ -5,6 +5,7 @@ Secretos solo por variables de entorno (`.env` está en .gitignore; ver `.env.ex
 
 from __future__ import annotations
 
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
@@ -39,6 +40,8 @@ class Settings(BaseSettings):
     bedrock_model_id: str = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
     bedrock_guardrail_id: str | None = None
     bedrock_guardrail_version: str = "DRAFT"
+    # Simulación de hora para la demo (F6), p. ej. `2026-10-08T19:00:00-05:00`. Vacío = hora real.
+    demo_now: datetime | None = None
     # CRM (F1): si falta, se usa FakeCrm.
     hubspot_token: SecretStr | None = None
 

@@ -16,7 +16,7 @@ from app.adapters.calendar import SlotsRepository
 from app.adapters.crm import build_crm
 from app.adapters.llm import build_llm
 from app.adapters.workshop import build_workshop
-from app.core.clock import Clock, SystemClock
+from app.core.clock import Clock, DemoClock, SystemClock
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
 from app.core.ratelimit import setup_rate_limiting
@@ -57,6 +57,11 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
         redoc_url=None,
     )
     app.state.settings = settings
+    if clock is None and settings.demo_now is not None:
+        clock = DemoClock(settings.demo_now)
+        log.warning(
+            "demo clock (simulación de hora)", extra={"start": settings.demo_now.isoformat()}
+        )
     app.state.clock = clock or SystemClock()
     app.state.crm = build_crm(settings)
     app.state.workshop = build_workshop(settings)
