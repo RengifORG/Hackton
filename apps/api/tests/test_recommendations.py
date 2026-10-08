@@ -92,7 +92,9 @@ def test_always_three_catalog_models_for_any_profile(client: TestClient, profile
 
 def test_same_profile_gives_the_same_answer(client: TestClient) -> None:
     profile = "pareja, ciudad, 25k, cargo en casa"
-    assert recommend(client, profile) == recommend(client, profile)
+    first = recommend(client, profile)
+    second = recommend(client, profile)
+    assert first == second
 
 
 def test_session_id_is_accepted(client: TestClient) -> None:
