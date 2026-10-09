@@ -54,7 +54,7 @@ describe('SeagullPage', () => {
     expect(within(chat).getByText(LOPDP_NOTICE)).toBeInTheDocument()
 
     await userEvent.click(
-      (await viewer()).getByRole('button', { name: 'Batería' }),
+      (await viewer()).getByRole('button', { name: 'Blade Battery' }),
     )
 
     expect(

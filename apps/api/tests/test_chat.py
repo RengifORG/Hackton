@@ -108,8 +108,8 @@ def test_hotspot_synonyms_and_replies_come_from_the_catalog(
     [
         ("cómo son los asientos", "seats", "4 plazas"),
         ("cuánta batería tiene", "battery", "30.08"),
-        ("cuál es la autonomía", "battery", "305"),
-        ("cómo son las luces", "lights", "Luces"),
+        ("cuál es la autonomía", "battery", "300"),
+        ("cómo son las luces", "lights", "LED"),
         ("¿y las ruedas?", "wheels", "No tengo ese dato"),  # sin dato en el catálogo: no inventa
         ("tamaño del maletero", "trunk", "No tengo ese dato"),
     ],

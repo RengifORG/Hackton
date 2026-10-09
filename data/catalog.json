@@ -31,22 +31,35 @@
       "id": "seagull",
       "name": "BYD Seagull",
       "segment": "City car eléctrico",
-      "price": 18990,
+      "price": 17990,
       "currency": "USD",
-      "rangeKm": 305,
+      "rangeKm": 300,
       "rangeStandard": "NEDC",
       "thumbnail": "/img/seagull.jpg",
       "has3d": true,
       "model3d": "/models/seagull.glb",
       "idealFor": ["ciudad", "presupuesto ajustado", "1-2 personas"],
-      "specs": { "verified": false, "battery": { "capacityKwh": 30.08 }, "motor": { "powerKw": 55 }, "seats": { "count": 4 } },
+      "specs": {
+        "source": "bydauto.ec/project/seagull y Catalogo-BYD-SEAGULL.pdf (consultados 2026-10-08)",
+        "versions": [ { "name": "300 km (NEDC)", "price": 17990 }, { "name": "400 km (NEDC)", "price": 19990 } ],
+        "battery": { "type": "Blade Battery", "capacityKwh": 30.08, "verified": false },
+        "motor": { "powerKw": 55, "verified": false },
+        "seats": { "count": 4, "verified": false },
+        "screen": { "sizeInches": 10.1, "type": "Rotativa FHD con sistema DiLink, Apple CarPlay y Android Auto", "voice": "Hi BYD" },
+        "dimensions": { "wheelbaseMm": 2500 },
+        "safety": { "airbags": 6, "detail": "Frontales para conductor y pasajero, y de cortina delanteros y traseros" },
+        "lights": { "type": "LED Ice Crystal Frost" },
+        "platform": "e-Platform 3.0",
+        "extras": ["Cargador inalámbrico de 15 W", "Volante multifuncional"],
+        "colors": { "list": ["Apricity White", "Polar Night Black", "Sprout Green", "Dark Blue", "Light Blue"] }
+      },
       "hotspots": [
         { "id": "wheels", "label": "Llantas y rines", "position": [1.2, 0.35, 1.4] },
         { "id": "seats", "label": "Asientos", "position": [0.4, 1.33, 0.0] },
-        { "id": "screen", "label": "Pantalla", "position": [0.0, 1.27, 0.4] },
-        { "id": "battery", "label": "Batería", "position": [1.0, 0.3, 0.0] },
+        { "id": "screen", "label": "Pantalla rotativa 10.1\"", "position": [0.0, 1.27, 0.4] },
+        { "id": "battery", "label": "Blade Battery", "position": [1.0, 0.3, 0.0] },
         { "id": "trunk", "label": "Maletero", "position": [0.0, 1.0, -2.2] },
-        { "id": "lights", "label": "Luces", "position": [0.0, 0.9, 2.15] }
+        { "id": "lights", "label": "Luces LED", "position": [0.0, 0.9, 2.15] }
       ]
     },
     {

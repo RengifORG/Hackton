@@ -455,7 +455,7 @@ def test_llm_choice_with_a_phev_is_kept_for_a_customer_without_charger(
     assert recommend(client, NO_CHARGER) == ["shark", "dolphin", "yuan-up"]
 
 
-@pytest.mark.parametrize("question", ["cuéntame de la pantalla", "tamaño del maletero"])
+@pytest.mark.parametrize("question", ["¿y las llantas?", "tamaño del maletero"])
 def test_missing_catalog_data_skips_the_llm_and_uses_the_exact_phrase(
     client: TestClient, use_llm: Callable[[FakeLlm], FakeLlm], question: str
 ) -> None:
@@ -466,5 +466,7 @@ def test_missing_catalog_data_skips_the_llm_and_uses_the_exact_phrase(
         "/chat",
         json={"sessionId": "sess-qa-nodata-1", "message": question, "modelId": "seagull"},
     )
-    assert response.json()["reply"] == "No tengo ese dato, un asesor te confirma."
+    reply = response.json()["reply"]
+    assert reply.startswith("No tengo ese dato, un asesor te confirma.")
+    assert "sí puedo contarte" in reply and "pantalla" in reply  # ofrece lo que sí hay
     assert fake.calls == []

@@ -38,7 +38,7 @@ describe('CarViewer sin WebGL (CA5.4)', () => {
     expect(screen.getAllByRole('button')).toHaveLength(6)
   })
 
-  it('click en "Batería" selecciona battery y enfoca el store', async () => {
+  it('click en "Blade Battery" selecciona battery y enfoca el store', async () => {
     const onHotspotSelect = vi.fn()
     render(
       <CarViewer
@@ -48,7 +48,7 @@ describe('CarViewer sin WebGL (CA5.4)', () => {
       />,
     )
 
-    await userEvent.click(screen.getByRole('button', { name: 'Batería' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Blade Battery' }))
 
     expect(onHotspotSelect).toHaveBeenCalledWith('battery')
     expect(useViewerStore.getState().focusedHotspot).toBe('battery')
