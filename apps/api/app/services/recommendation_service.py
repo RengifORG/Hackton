@@ -219,7 +219,7 @@ class RecommendationService:
         # Sin PII: un celular o una cédula no deben leerse como presupuesto ni pasajeros.
         profile = parse_profile(redact_free_text(profile_text))
         scored = [self._score(model, profile) for model in self._catalog.list()]
-        llm_ids = self._llm_pick(profile_text)
+        llm_ids = self._llm_pick(profile_text, profile)
         if llm_ids:
             by_id = {s.model.id: s for s in scored}
             top = [by_id[model_id] for model_id in llm_ids]
@@ -246,8 +246,9 @@ class RecommendationService:
             for s in top
         ]
 
-    def _llm_pick(self, profile_text: str) -> list[str] | None:
-        """1 llamada con tool forzada; devuelve 3 ids distintos del catálogo o None (fallback)."""
+    def _llm_pick(self, profile_text: str, profile: Profile) -> list[str] | None:
+        """1 llamada con tool forzada; devuelve 3 ids distintos del catálogo que respetan las reglas
+        de negocio, o None (fallback al scoring)."""
         if self._llm is None:
             return None
         catalog_min = [
@@ -277,6 +278,11 @@ class RecommendationService:
             ids = RecommendModelsInput.model_validate(result.tool_input).model_ids
             if len(set(ids)) != TOP_N or any(self._catalog.get(i) is None for i in ids):
                 raise ValueError("ids fuera del catálogo o repetidos")
+            if profile.home_charger is False and not any(
+                is_phev(self._catalog.get(i)) for i in ids
+            ):
+                # CA2.4: sin cargador en casa, la recomendación debe incluir un híbrido enchufable.
+                raise ValueError("sin PHEV para un cliente sin cargador en casa")
         except (LlmError, ValidationError, ValueError) as exc:
             log.warning("llm recommendation discarded", extra={"error": type(exc).__name__})
             return None
