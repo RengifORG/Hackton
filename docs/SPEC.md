@@ -6,7 +6,7 @@ Versión 0.1 · Hackathon · Alcance: 5 horas. Todo criterio de aceptación (CA)
 El call center cierra a las 18:00. Después de esa hora los leads de web (solo formulario) y WhatsApp se pierden. No hay chatbot ni agendamiento. CRM de asesores: HubSpot. Taller: ERP propio (sin API conocida → mock).
 
 ## Solución MVP
-Agente conversacional 24/7 (web; WhatsApp si alcanza el tiempo) que: (1) capta y califica el lead, (2) recomienda 3 modelos según un perfil breve, (3) responde detalles del BYD Dolphin con vista 3D, (4) agenda cita de prueba de manejo o taller, (5) entrega el lead/cita al asesor (HubSpot) y a la mecánica (mock).
+Agente conversacional 24/7 (web; WhatsApp si alcanza el tiempo) que: (1) capta y califica el lead, (2) recomienda 3 modelos según un perfil breve, (3) responde detalles del BYD Seagull con vista 3D, (4) agenda cita de prueba de manejo o taller, (5) entrega el lead/cita al asesor (HubSpot) y a la mecánica (mock).
 
 ## Métrica de demo
 Leads captados fuera de horario (18:00–08:00) y citas agendadas. El dashboard mock del asesor muestra este contador.
@@ -31,7 +31,7 @@ Como visitante, describo mi perfil ("familia de 4, ciudad, presupuesto 30k") y r
 - CA2.4 Árbol de decisión (ver `docs/decision-tree.md`): uso (ciudad/carretera/trabajo), pasajeros, presupuesto, carga en casa sí/no.
 
 ### H3 — Chat con detalle de modelo (prioridad 1)
-Como visitante, pregunto por llantas, asientos, batería, etc. del Dolphin y recibo respuesta basada en el catálogo.
+Como visitante, pregunto por llantas, asientos, batería, etc. del modelo (el de la página 3D es el Seagull) y recibo respuesta basada en el catálogo; si el dato no está, «No tengo ese dato, un asesor te confirma».
 - CA3.1 `POST /chat` con `{sessionId, message, modelId?}` → 200 `{reply, suggestedActions[], hotspot?}`.
 - CA3.2 El system prompt incluye solo el JSON del modelo consultado; la respuesta no inventa specs (si no está en catálogo responde "no tengo ese dato, un asesor te confirma").
 - CA3.3 `hotspot` ∈ {`wheels`,`seats`,`screen`,`battery`,`trunk`,`lights`} cuando la pregunta refiere a una parte; el front enfoca la cámara 3D a ese hotspot.
@@ -44,8 +44,8 @@ Como lead, quiero agendar prueba de manejo o cita de taller.
 - CA4.2 `POST /appointments` `{leadId, type, slotId, vehicle?}` → 201; slot ocupado → 409.
 - CA4.3 Cita `test_drive` → notifica `CrmAdapter`; cita `service` → notifica `WorkshopAdapter` (mock que escribe en memoria/JSON).
 
-### H5 — Vista 3D del Dolphin (prioridad 1, Esteban)
-- CA5.1 `/modelos/dolphin` carga un `.glb` con órbita 360, auto-rotación y zoom.
+### H5 — Vista 3D del Seagull (prioridad 1, Esteban)
+- CA5.1 `/modelos/seagull` carga un `.glb` con órbita 360, auto-rotación y zoom (`/modelos/dolphin` redirige). El único asset 3D disponible es un BYD Seagull (CC BY-NC-SA, `apps/web/public/models/CREDITS.md`): la página, los hotspots y el chat usan la ficha del Seagull para que el nombre coincida con lo que se ve.
 - CA5.2 6 hotspots clickeables; click → abre el chat con la pregunta prellenada ("Cuéntame de las llantas").
 - CA5.3 Mensaje del chat con `hotspot` → la cámara anima hacia ese punto.
 - CA5.4 Loader y fallback a imágenes si WebGL no está disponible.

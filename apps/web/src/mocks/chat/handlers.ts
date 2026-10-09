@@ -6,7 +6,7 @@ import { env } from '@/lib/env'
 import { findCatalogModel, type CatalogModel } from '../catalog/data'
 import { readJsonBody, validationError } from '../validation'
 
-const DEFAULT_MODEL_ID = 'dolphin'
+const DEFAULT_MODEL_ID = 'seagull'
 const LOPDP_NOTICE =
   'Tus datos se tratan según la LOPDP de Ecuador solo para atender tu solicitud.'
 const GREETING = '¡Hola! Soy el asesor virtual de BYD Ecuador. ¿Qué buscas hoy?'

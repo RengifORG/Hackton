@@ -13,7 +13,7 @@ import {
 } from './prompts'
 
 const MAX_MESSAGE_LENGTH = 1000
-const LEAD_INTEREST = 'BYD Dolphin'
+const LEAD_INTEREST = 'BYD Seagull'
 
 type LeadField = 'name' | 'phone' | 'consent'
 export type LeadFieldErrors = Partial<Record<LeadField | 'form', string>>

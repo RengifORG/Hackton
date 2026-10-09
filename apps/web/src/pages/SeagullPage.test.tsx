@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { LOPDP_NOTICE, resetChatStore } from '@/features/chat'
 import { useViewerStore } from '@/features/viewer'
 import { handlers } from '@/mocks/handlers'
-import { DolphinPage } from './DolphinPage'
+import { SeagullPage } from './SeagullPage'
 
 const server = setupServer(...handlers)
 
@@ -25,7 +25,7 @@ afterAll(() => server.close())
 function renderPage() {
   render(
     <MemoryRouter>
-      <DolphinPage />
+      <SeagullPage />
     </MemoryRouter>,
   )
 }
@@ -36,12 +36,12 @@ async function viewer() {
   return within(region)
 }
 
-describe('DolphinPage', () => {
+describe('SeagullPage', () => {
   it('muestra el heading y, sin WebGL, el fallback con los 6 hotspots', async () => {
     renderPage()
 
     expect(
-      screen.getByRole('heading', { name: 'BYD Dolphin' }),
+      screen.getByRole('heading', { name: 'BYD Seagull' }),
     ).toBeInTheDocument()
     expect((await viewer()).getAllByRole('button')).toHaveLength(6)
   })
@@ -54,13 +54,13 @@ describe('DolphinPage', () => {
     expect(within(chat).getByText(LOPDP_NOTICE)).toBeInTheDocument()
 
     await userEvent.click(
-      (await viewer()).getByRole('button', { name: 'Llantas y rines' }),
+      (await viewer()).getByRole('button', { name: 'Batería' }),
     )
 
     expect(
-      await within(chat).findByText('Cuéntame de las llantas'),
+      await within(chat).findByText('Cuéntame de la batería'),
     ).toBeInTheDocument()
-    expect(await within(chat).findByText(/205\/55 R16/)).toBeInTheDocument()
+    expect(await within(chat).findByText(/30\.08/)).toBeInTheDocument() // ficha del Seagull
     expect(within(chat).getByText(LOPDP_NOTICE)).toBeVisible()
   })
 

@@ -51,7 +51,7 @@ LOPDP_NOTICE = (
 )
 GREETING = f"¡Hola! Soy el asesor virtual de BYD Ecuador. {LOPDP_NOTICE} ¿Qué buscas hoy?"
 HELP = (
-    "Puedo recomendarte 3 modelos, contarte del BYD Dolphin (llantas, asientos, pantalla, "
+    "Puedo recomendarte 3 modelos, contarte del BYD Seagull (llantas, asientos, pantalla, "
     "batería, maletero, luces) o agendar una prueba de manejo o una cita de taller. ¿Qué prefieres?"
 )
 PROFILE_QUESTIONS = (
@@ -66,7 +66,8 @@ NO_CONSENT = (
 )
 NO_SLOTS = "No tengo franjas libres en las próximas dos semanas; un asesor te contactará."
 FOLLOW_UP = "Un asesor te contactará en horario de oficina."
-VIEW_3D_TEXT = "Mira el BYD Dolphin en 3D: gira, acerca y toca cada punto para preguntarme."
+MODEL_3D_ID = "seagull"  # el .glb de la web es un BYD Seagull (apps/web/public/models)
+VIEW_3D_TEXT = "Mira el BYD Seagull en 3D: gira, acerca y toca cada punto para preguntarme."
 DETAIL_SYSTEM = (
     "Eres el asesor virtual de BYD Ecuador. Responde en español, en máximo 3 frases y en texto "
     "plano (sin markdown), SOLO con los datos del JSON del modelo de abajo. Si el dato que piden "
@@ -525,7 +526,7 @@ class ChatService:
         lines = "\n".join(f"{i}. {item.name}: {item.reason}" for i, item in enumerate(items, 1))
         return Turn(
             f"Con tu perfil te recomiendo:\n{lines}\n\n"
-            "¿Quieres ver el Dolphin en 3D, agendar una prueba de manejo o dejar tus datos?",
+            "¿Quieres ver el Seagull en 3D, agendar una prueba de manejo o dejar tus datos?",
             [
                 SuggestedAction.VIEW_3D,
                 SuggestedAction.BOOK_TEST_DRIVE,
@@ -536,10 +537,9 @@ class ChatService:
     def _detail(self, session: ChatSession, message: str, norm: str) -> Turn:
         session.stage = Stage.DETAIL
         model: Model | None
-        if session.model_id:
-            model = self._catalog.get(session.model_id)  # id desconocido → sin datos
-        else:
-            model = self._catalog.get(_model_in_text(norm) or "dolphin")
+        # Manda el modelo que nombra el cliente («¿y el Dolphin?»); si no, el de la página
+        # (`modelId`) y, por defecto, el que tiene vista 3D. Id desconocido → sin datos.
+        model = self._catalog.get(_model_in_text(norm) or session.model_id or MODEL_3D_ID)
         hotspot = _hotspot_for(norm)  # por sinónimos: nunca lo decide el LLM
         if hotspot:
             return Turn(

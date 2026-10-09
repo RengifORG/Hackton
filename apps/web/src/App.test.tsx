@@ -33,10 +33,10 @@ describe('AppRoutes', () => {
     ).toBeInTheDocument()
   })
 
-  it('muestra el BYD Dolphin en /modelos/dolphin', async () => {
-    renderAt('/modelos/dolphin')
+  it('muestra el BYD Seagull en /modelos/seagull', async () => {
+    renderAt('/modelos/seagull')
     expect(
-      screen.getByRole('heading', { name: 'BYD Dolphin' }),
+      screen.getByRole('heading', { name: 'BYD Seagull' }),
     ).toBeInTheDocument()
     // Espera a que termine la carga del modelo para no dejar updates colgando.
     expect(

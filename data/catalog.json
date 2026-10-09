@@ -10,8 +10,7 @@
       "rangeKm": 397,
       "rangeStandard": "NEDC",
       "thumbnail": "/img/dolphin.jpg",
-      "has3d": true,
-      "model3d": "/models/dolphin.glb",
+      "has3d": false,
       "idealFor": ["ciudad", "primer eléctrico", "pareja o familia pequeña", "presupuesto < 25k"],
       "specs": {
         "battery": { "type": "Blade Battery LFP", "capacityKwh": 44.9, "verified": false },
@@ -26,15 +25,7 @@
         "suspension": { "rear": "Independiente" },
         "warranty": { "vehicle": "Consultar concesionario", "battery": "Consultar concesionario", "verified": false },
         "colors": { "list": ["Consultar"], "verified": false }
-      },
-      "hotspots": [
-        { "id": "wheels", "label": "Llantas y rines", "position": [1.2, 0.35, 1.4] },
-        { "id": "seats", "label": "Asientos", "position": [0.4, 1.33, 0.0] },
-        { "id": "screen", "label": "Pantalla rotativa 12.8\"", "position": [0.0, 1.27, 0.4] },
-        { "id": "battery", "label": "Blade Battery", "position": [1.0, 0.3, 0.0] },
-        { "id": "trunk", "label": "Maletero", "position": [0.0, 1.0, -2.2] },
-        { "id": "lights", "label": "Luces LED", "position": [0.0, 0.9, 2.15] }
-      ]
+      }
     },
     {
       "id": "seagull",
@@ -45,9 +36,18 @@
       "rangeKm": 305,
       "rangeStandard": "NEDC",
       "thumbnail": "/img/seagull.jpg",
-      "has3d": false,
+      "has3d": true,
+      "model3d": "/models/seagull.glb",
       "idealFor": ["ciudad", "presupuesto ajustado", "1-2 personas"],
-      "specs": { "verified": false, "battery": { "capacityKwh": 30.08 }, "motor": { "powerKw": 55 }, "seats": { "count": 4 } }
+      "specs": { "verified": false, "battery": { "capacityKwh": 30.08 }, "motor": { "powerKw": 55 }, "seats": { "count": 4 } },
+      "hotspots": [
+        { "id": "wheels", "label": "Llantas y rines", "position": [1.2, 0.35, 1.4] },
+        { "id": "seats", "label": "Asientos", "position": [0.4, 1.33, 0.0] },
+        { "id": "screen", "label": "Pantalla", "position": [0.0, 1.27, 0.4] },
+        { "id": "battery", "label": "Batería", "position": [1.0, 0.3, 0.0] },
+        { "id": "trunk", "label": "Maletero", "position": [0.0, 1.0, -2.2] },
+        { "id": "lights", "label": "Luces", "position": [0.0, 0.9, 2.15] }
+      ]
     },
     {
       "id": "yuan-up",

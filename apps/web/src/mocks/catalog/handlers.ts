@@ -4,7 +4,7 @@ import { env } from '@/lib/env'
 import { catalogModels, findCatalogModel } from './data'
 
 // Rutas absolutas contra env.apiUrl, nunca comodines: `*/models/:modelId`
-// también atraparía `/models/dolphin.glb` del front.
+// también atraparía `/models/seagull.glb` del front.
 export const catalogHandlers = [
   http.get(`${env.apiUrl}/models`, () =>
     HttpResponse.json(

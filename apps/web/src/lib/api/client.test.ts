@@ -32,8 +32,8 @@ describe('cliente API contra el mock de catálogo', () => {
     }
   })
 
-  it('getModel("dolphin") trae 6 hotspots con ids del contrato', async () => {
-    const model = await api.getModel('dolphin')
+  it('getModel("seagull") trae 6 hotspots con ids del contrato', async () => {
+    const model = await api.getModel('seagull')
 
     expect(model.hotspots).toHaveLength(6)
     for (const hotspot of model.hotspots ?? []) {
@@ -41,8 +41,8 @@ describe('cliente API contra el mock de catálogo', () => {
     }
   })
 
-  it('getModel("seagull") trae hotspots vacíos', async () => {
-    const model = await api.getModel('seagull')
+  it('getModel("dolphin") trae hotspots vacíos (el 3D es el Seagull)', async () => {
+    const model = await api.getModel('dolphin')
 
     expect(model.hotspots).toEqual([])
   })

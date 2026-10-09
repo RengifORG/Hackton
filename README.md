@@ -12,7 +12,7 @@ El call center de BYD Ecuador atiende de 08:00 a 18:00. Fuera de ese horario el 
 
 Un showroom abierto 24/7 que **muestra, capta y agenda** sin intervención humana, y deja todo listo en la bandeja del asesor y del taller para las 08:00:
 
-1. **Muestra** — El BYD Dolphin en 3D: vista 360°, interior, vistas rápidas y hotspots (llantas, asientos, pantalla, batería, maletero, luces). Tocar una pieza abre la conversación sobre ella; preguntar por una pieza mueve la cámara.
+1. **Muestra** — El BYD Seagull en 3D: vista 360°, interior, vistas rápidas y hotspots (llantas, asientos, pantalla, batería, maletero, luces). Tocar una pieza abre la conversación sobre ella; preguntar por una pieza mueve la cámara.
 2. **Capta** — El asesor virtual responde con la ficha oficial, recomienda 3 modelos del portafolio BYD Ecuador con 4 preguntas (uso, pasajeros, presupuesto, carga en casa) y registra el lead con consentimiento LOPDP.
 3. **Agenda** — Prueba de manejo (Quito Norte) o cita de taller (Taller Quito) en franjas reales, con control de disponibilidad (409 si la franja está ocupada). Las citas de taller incluyen el beneficio SmartClub canjeable en Farmaenlace (reto 1).
 
@@ -23,7 +23,7 @@ Métrica de impacto: **leads capturados fuera de horario (18:00–08:00) y citas
 | Ruta | Qué muestra |
 |---|---|
 | `/` | Landing con CTA al asesor virtual |
-| `/modelos/dolphin` | Visor 3D + asesor virtual (chat, recomendación, lead, cita) |
+| `/modelos/seagull` (`/modelos/dolphin` redirige) | Visor 3D + asesor virtual (chat, recomendación, lead, cita) |
 | `/asesor` | Bandeja del asesor comercial: KPIs, leads con teléfono enmascarado, modelos recomendados, cita, badge "Capturado fuera de horario"; auto-refresco cada 5 s |
 | `/taller` | Agenda del taller: citas de servicio de hoy y próximos 7 días, por día y franja, con beneficio SmartClub |
 
@@ -39,7 +39,7 @@ Métrica de impacto: **leads capturados fuera de horario (18:00–08:00) y citas
 | CRM HubSpot | **Simulado**: `FakeCrm` en memoria; adapter con interfaz lista para `HUBSPOT_TOKEN` |
 | ERP / órdenes de taller | **Simulado**: `FakeWorkshop` en memoria |
 | Persistencia | **En memoria** (piloto: DynamoDB) |
-| Modelo 3D | **Proxy**: BYD Seagull con licencia CC BY-NC-SA (ver `apps/web/public/models/CREDITS.md`); en producción BYD aporta sus assets |
+| Modelo 3D | **Real, de terceros**: BYD Seagull con licencia CC BY-NC-SA (ver `apps/web/public/models/CREDITS.md`); la página y el chat lo presentan como Seagull con su ficha del catálogo. En producción BYD aporta sus assets |
 | WhatsApp | **Siguiente paso**: webhook diseñado, no incluido |
 
 ## Arquitectura

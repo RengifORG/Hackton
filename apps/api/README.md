@@ -54,7 +54,7 @@ Copia `.env.example` a `.env` (ignorado por git). Ninguna es obligatoria para ar
 | API FastAPI (validación estricta, rate limit, CORS, logs JSON con PII redactada) | **Real** |
 | Reglas de negocio: `afterHours`, franjas, 409, CONTACTO → CITA, scoring de recomendaciones | **Real** (deterministas, con tests) |
 | Amazon Bedrock · Claude Haiku 4.5 (`us-east-1`, Converse) en la ficha del chat y en `/recommendations` | **Real** con `USE_BEDROCK=1` y credenciales del perfil; si falla o no hay credenciales, responde el camino determinista |
-| Visor 3D del Dolphin (web) | **Real** |
+| Visor 3D del Seagull (web; único asset 3D disponible) | **Real** |
 | CRM HubSpot | **Simulado**: `FakeCrm` en memoria si no hay `HUBSPOT_TOKEN` |
 | Taller / órdenes de trabajo | **Simulado**: `FakeWorkshop` en memoria (`WO-AAAAMMDD-NNN`) |
 | Persistencia | **En memoria**: leads, citas y sesiones se pierden al reiniciar |

@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { resetChatStore } from '@/features/chat'
 import { useViewerStore } from '@/features/viewer'
 import { handlers } from '@/mocks/handlers'
-import { DolphinPage } from './DolphinPage'
+import { SeagullPage } from './SeagullPage'
 
 const server = setupServer(...handlers)
 
@@ -25,12 +25,12 @@ afterAll(() => server.close())
 function renderPage() {
   render(
     <MemoryRouter>
-      <DolphinPage />
+      <SeagullPage />
     </MemoryRouter>,
   )
 }
 
-describe('DolphinPage · lead (H1)', () => {
+describe('SeagullPage · lead (H1)', () => {
   it('i) "Dejar mis datos" → formulario con consentimiento → confirmación', async () => {
     const user = userEvent.setup()
     renderPage()
