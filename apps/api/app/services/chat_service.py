@@ -38,8 +38,13 @@ from app.services.appointment_service import (
     AppointmentServiceDep,
     SlotTakenError,
 )
+from app.services.chat_router import route_message
 from app.services.lead_service import LeadService, LeadServiceDep
-from app.services.recommendation_service import RecommendationService, RecommendationServiceDep
+from app.services.recommendation_service import (
+    RecommendationService,
+    RecommendationServiceDep,
+    parse_profile,
+)
 from app.services.slot_parser import parse_slot_request
 
 log = logging.getLogger(__name__)
@@ -131,6 +136,19 @@ RECOMMEND_KW = (
     "recomiend",
     "recomend",
     "que modelo",
+    "cual elegir",
+    "cual escoger",
+    "no se cual",
+    "elijo",
+    "elegir",
+    "escoger",
+    "que carro",
+    "que auto ",  # con espacio: no confundir con «qué autonomía»
+    "que autos",
+    "que vehiculo",
+    "cual comprar",
+    "cual es mejor",
+    "asesorame",
     "modelos",
     "opciones",
     "comparar",
@@ -409,10 +427,50 @@ def hotspot_reply(model: Model | None, hotspot: Hotspot) -> str:
     if hotspot is Hotspot.TRUNK:
         trunk = _get(specs, "dimensions", "trunkL")
         return f"{model.name}: maletero de {trunk} L." if trunk else NO_DATA
+    lights = _get(specs, "lights", "type")
+    if lights:
+        return f"{model.name}: luces {lights}."
     label = next((h.label for h in model.hotspots if h.id is Hotspot.LIGHTS), None)
     return (
         f"{model.name}: {label}. No tengo más detalle, un asesor te confirma." if label else NO_DATA
     )
+
+
+TOPIC_LABEL = {
+    Hotspot.WHEELS: "llantas",
+    Hotspot.SEATS: "asientos",
+    Hotspot.SCREEN: "pantalla",
+    Hotspot.BATTERY: "batería y autonomía",
+    Hotspot.TRUNK: "maletero",
+    Hotspot.LIGHTS: "luces",
+}
+PROFILE_HINTS = ("hijo", "hija", "familia", "pasajer", "presupuesto", "viajo", "carretera")
+CHEAPEST_KW = ("mas barato", "mas economico", "menor precio", "mas accesible")
+PRICIEST_KW = ("mas caro", "mayor precio")
+LONGEST_RANGE_KW = (
+    "mas autonomia",
+    "mayor autonomia",
+    "mas km",
+    "mas kilometros",
+    "mas rango",
+    "llega mas lejos",
+)
+
+
+def _no_data_reply(model: Model | None) -> str:
+    """«No tengo ese dato…» exacto y, en vez de cortar, lo que sí hay de ese modelo."""
+    if model is None:
+        return NO_DATA
+    topics = [TOPIC_LABEL[h] for h in Hotspot if hotspot_reply(model, h) != NO_DATA]
+    return f"{NO_DATA} Del {model.name} sí puedo contarte: {', '.join([*topics, 'precio'])}."
+
+
+def _has_profile(message: str) -> bool:
+    """El mensaje ya trae datos para recomendar (uso, pasajeros, presupuesto, carga o familia)."""
+    text = redact_free_text(message)  # un celular o una cédula no son un presupuesto
+    profile = parse_profile(text)
+    known = (profile.usage, profile.passengers, profile.budget, profile.home_charger)
+    return any(v is not None for v in known) or any(h in _norm(text) for h in PROFILE_HINTS)
 
 
 def summary_reply(model: Model) -> str:
@@ -493,7 +551,60 @@ class ChatService:
         return self._handle_intent(session, message, norm)
 
     def _handle_intent(self, session: ChatSession, message: str, norm: str) -> Turn | None:
+        compared = self._compare(norm)
+        if compared is not None:
+            return compared
         intent = _detect_intent(norm)
+        profile = _has_profile(message)
+        if intent is None and profile:
+            intent = "recommend"  # «soy padre de familia y tengo 3 hijos»
+        if intent is None and self._llm is not None:
+            return self._route_with_llm(session, message, norm)
+        return self._dispatch(session, message, norm, intent, has_profile=profile)
+
+    def _compare(self, norm: str) -> Turn | None:
+        """«¿Cuál es el más barato / tiene más autonomía?» se responde exacto con el catálogo."""
+        models = self._catalog.list()
+        if not models or _model_in_text(norm):
+            return None
+        actions = [SuggestedAction.RECOMMEND, SuggestedAction.BOOK_TEST_DRIVE]
+        if any(k in norm for k in CHEAPEST_KW):
+            m = min(models, key=lambda x: x.price)
+            text = f"El más económico es el {m.name}: desde {_fmt_money(m.price)}"
+            return Turn(f"{text} ({m.segment}, autonomía {m.range_km} km).", actions)
+        if any(k in norm for k in PRICIEST_KW):
+            m = max(models, key=lambda x: x.price)
+            return Turn(f"El de mayor precio es el {m.name}: {_fmt_money(m.price)}.", actions)
+        if any(k in norm for k in LONGEST_RANGE_KW):
+            m = max(models, key=lambda x: x.range_km)
+            return Turn(
+                f"El de mayor autonomía es el {m.name} ({m.segment}): {m.range_km} km.", actions
+            )
+        return None
+
+    def _route_with_llm(self, session: ChatSession, message: str, norm: str) -> Turn | None:
+        """Las palabras clave no bastaron: el LLM clasifica (esquema cerrado) y el service actúa."""
+        decision = route_message(self._llm, self._catalog, message)  # type: ignore[arg-type]
+        if decision is None:
+            return None
+        if decision.intent == "other":
+            reply = (decision.reply or "").strip()
+            return Turn(reply, GREETING_ACTIONS) if reply else None
+        if decision.intent == "model_info":
+            return self._detail(session, message, norm, model_id=decision.model_id)
+        return self._dispatch(
+            session, message, norm, decision.intent, has_profile=decision.has_profile
+        )
+
+    def _dispatch(
+        self,
+        session: ChatSession,
+        message: str,
+        norm: str,
+        intent: str | None,
+        *,
+        has_profile: bool = False,
+    ) -> Turn | None:
         if intent == "test_drive":
             session.pending_type = AppointmentType.TEST_DRIVE
             return self._start_booking(session)
@@ -507,6 +618,8 @@ class ChatService:
                 return Turn(f"Ya tengo tus datos. {FOLLOW_UP}", GREETING_ACTIONS)
             return self._ask_contact(session)
         if intent == "recommend":
+            if has_profile:  # ya contó su perfil: recomendar sin volver a preguntar
+                return self._recommend(session, message)
             session.stage = Stage.PROFILE
             return Turn(PROFILE_QUESTIONS, [SuggestedAction.RECOMMEND])
         if intent == "view_3d":
@@ -535,18 +648,22 @@ class ChatService:
             ],
         )
 
-    def _detail(self, session: ChatSession, message: str, norm: str) -> Turn:
+    def _detail(
+        self, session: ChatSession, message: str, norm: str, *, model_id: str | None = None
+    ) -> Turn:
         session.stage = Stage.DETAIL
         model: Model | None
-        # Manda el modelo que nombra el cliente («¿y el Dolphin?»); si no, el de la página
-        # (`modelId`) y, por defecto, el que tiene vista 3D. Id desconocido → sin datos.
-        model = self._catalog.get(_model_in_text(norm) or session.model_id or MODEL_3D_ID)
+        # Manda el modelo que nombra el cliente («¿y el Dolphin?», o el que entendió el LLM); si
+        # no, el de la página (`modelId`) y, por defecto, el que tiene vista 3D.
+        model = self._catalog.get(
+            model_id or _model_in_text(norm) or session.model_id or MODEL_3D_ID
+        )
         hotspot = _hotspot_for(norm)  # por sinónimos: nunca lo decide el LLM
         if hotspot:
             catalog_reply = hotspot_reply(model, hotspot)
             return Turn(
-                # Sin dato en el catálogo: la frase exacta del SPEC, sin pasar por el LLM.
-                catalog_reply
+                # Sin dato en el catálogo: la frase exacta del SPEC (sin LLM) + lo que sí sabemos.
+                _no_data_reply(model)
                 if catalog_reply == NO_DATA
                 else self._narrate(model, message, catalog_reply),
                 [

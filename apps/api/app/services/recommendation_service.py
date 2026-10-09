@@ -129,6 +129,9 @@ def parse_passengers(text: str) -> int | None:
     )
     if match:
         return int(match.group(1) or match.group(2))
+    kids = re.search(r"(\d)\s*(?:hijos|hijas|ninos|ninas|chicos|guaguas)", norm)
+    if kids:  # «tengo 3 hijos» → 3 + los dos adultos
+        return min(int(kids.group(1)) + 2, 7)
     if "familia" in norm:
         return 4
     if "pareja" in norm or "dos personas" in norm:
