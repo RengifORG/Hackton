@@ -17,6 +17,7 @@ from app.core.clock import ECUADOR_TZ, Clock, ClockDep
 from app.core.pii import mask_phone
 from app.repositories.memory import LeadRepo, LeadRepoDep
 from app.schemas.lead import CrmStatus, Lead, LeadCreate, LeadRead
+from app.services.notify_service import NotifierDep, WhatsAppNotifier
 
 log = logging.getLogger(__name__)
 
@@ -32,10 +33,17 @@ def is_after_hours(moment: datetime) -> bool:
 
 
 class LeadService:
-    def __init__(self, repo: LeadRepo, crm: CrmPort, clock: Clock) -> None:
+    def __init__(
+        self,
+        repo: LeadRepo,
+        crm: CrmPort,
+        clock: Clock,
+        notifier: WhatsAppNotifier | None = None,
+    ) -> None:
         self._repo = repo
         self._crm = crm
         self._clock = clock
+        self._notifier = notifier
 
     def create(self, data: LeadCreate) -> Lead:
         now = self._clock.now().astimezone(ECUADOR_TZ)
@@ -52,6 +60,8 @@ class LeadService:
         self._repo.save(lead)
         lead = lead.model_copy(update={"crm_status": self._push_to_crm(lead)})
         self._repo.save(lead)
+        if lead.after_hours and self._notifier is not None:
+            self._notify_after_hours(lead)  # CA7.1: confirmación saliente, best-effort
         log.info(
             "lead created",
             extra={
@@ -81,6 +91,15 @@ class LeadService:
             crm_status=lead.crm_status,
         )
 
+    def _notify_after_hours(self, lead: Lead) -> None:
+        try:
+            self._notifier.lead_after_hours(lead)  # type: ignore[union-attr]
+        except Exception as exc:  # nunca rompe el 201
+            log.warning(
+                "whatsapp after-hours failed",
+                extra={"leadId": lead.id, "error": type(exc).__name__},
+            )
+
     def _push_to_crm(self, lead: Lead) -> CrmStatus:
         try:
             self._crm.push_lead(lead)
@@ -91,8 +110,10 @@ class LeadService:
         return CrmStatus.PUSHED
 
 
-def get_lead_service(repo: LeadRepoDep, crm: CrmDep, clock: ClockDep) -> LeadService:
-    return LeadService(repo, crm, clock)
+def get_lead_service(
+    repo: LeadRepoDep, crm: CrmDep, clock: ClockDep, notifier: NotifierDep
+) -> LeadService:
+    return LeadService(repo, crm, clock, notifier)
 
 
 LeadServiceDep = Annotated[LeadService, Depends(get_lead_service)]

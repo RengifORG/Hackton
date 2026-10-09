@@ -26,6 +26,8 @@ from app.schemas.appointment import (
     AppointmentType,
     Slot,
 )
+from app.schemas.lead import Lead
+from app.services.notify_service import NotifierDep, WhatsAppNotifier
 
 log = logging.getLogger(__name__)
 
@@ -57,6 +59,7 @@ class AppointmentService:
         crm: CrmPort,
         workshop: WorkshopPort,
         clock: Clock,
+        notifier: WhatsAppNotifier | None = None,
     ) -> None:
         self._slots = slots
         self._appointments = appointments
@@ -64,6 +67,7 @@ class AppointmentService:
         self._crm = crm
         self._workshop = workshop
         self._clock = clock
+        self._notifier = notifier
 
     def availability(self, appointment_type: AppointmentType, day: date) -> list[Slot]:
         """CA4.1: franjas del día (ordenadas por hora) con `available` según reservas."""
@@ -98,6 +102,7 @@ class AppointmentService:
         # Se persiste ANTES de avisar: una caída del CRM o del taller nunca pierde la cita.
         self._appointments.save(appointment)
         self._notify(appointment, lead)
+        self._confirm_by_whatsapp(appointment, lead)  # CA7.2, best-effort
         log.info(
             "appointment created",
             extra={
@@ -132,6 +137,17 @@ class AppointmentService:
                 },
             )
 
+    def _confirm_by_whatsapp(self, appointment: Appointment, lead: Lead) -> None:
+        if self._notifier is None:
+            return
+        try:
+            self._notifier.appointment_confirmed(appointment, lead)
+        except Exception as exc:  # nunca rompe el 201
+            log.warning(
+                "whatsapp appointment failed",
+                extra={"appointmentId": appointment.id, "error": type(exc).__name__},
+            )
+
     def _to_slot(self, slot_def: SlotDef, *, available: bool | None = None) -> Slot:
         if available is None:
             available = not self._appointments.is_booked(slot_def.id)
@@ -151,8 +167,9 @@ def get_appointment_service(
     crm: CrmDep,
     workshop: WorkshopDep,
     clock: ClockDep,
+    notifier: NotifierDep,
 ) -> AppointmentService:
-    return AppointmentService(slots, appointments, leads, crm, workshop, clock)
+    return AppointmentService(slots, appointments, leads, crm, workshop, clock, notifier)
 
 
 AppointmentServiceDep = Annotated[AppointmentService, Depends(get_appointment_service)]

@@ -26,6 +26,9 @@ Copia `.env.example` a `.env` (ignorado por git). Ninguna es obligatoria para ar
 | `AWS_REGION` | `us-east-1` | Región de Bedrock (única habilitada en la cuenta del evento) |
 | `BEDROCK_MODEL_ID` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Modelo (Converse API); respaldo `amazon.nova-lite-v1:0` |
 | `BEDROCK_GUARDRAIL_ID` / `_VERSION` | vacío / `DRAFT` | Guardrail opcional (no desplegado en el MVP) |
+| `WHATSAPP_ENABLED` | `0` | `1` envía confirmaciones por WhatsApp Cloud API (F7a) |
+| `WHATSAPP_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` | vacío | Token (temporal, consola de Meta) e id del número de prueba; **nunca en el repo** |
+| `WHATSAPP_API_VERSION` | `v25.0` | Versión de la Graph API |
 | `DEMO_NOW` | vacío | **Reloj de demo (simulado)**, p. ej. `2026-10-08T19:00:00-05:00`: la API arranca a esa hora y avanza con el reloj real |
 | `HUBSPOT_TOKEN` | vacío | Si existe, `HubSpotCrm`; si no, `FakeCrm` en memoria |
 | `LOG_LEVEL` | `INFO` | Nivel de logging |
@@ -42,6 +45,7 @@ Copia `.env.example` a `.env` (ignorado por git). Ninguna es obligatoria para ar
 - **F3** · H3 chat determinista: `POST /chat` con saludo + aviso LOPDP, intención por palabras clave, CONTACTO (nombre + celular + consentimiento explícito → lead) antes de CITA (franjas numeradas → cita), detalle solo con datos del catálogo y `hotspot` por sinónimos, 20/min → 429. ✅
 - **F4** · H2 recomendaciones: `POST /recommendations` con parser del perfil (uso, pasajeros, presupuesto, cargador) y scoring determinista del `decision-tree.md`; exactamente 3 modelos del catálogo con razón ≤ 200. El chat lo usa en la etapa de perfil. ✅
 - **F5** · Bedrock: `/chat` (etapa detalle) y `/recommendations` usan Claude Haiku 4.5 vía Converse con validación y fallback determinista. ✅
+- **F7a** · H7 WhatsApp saliente: lead fuera de horario → «Hola {nombre}, recibimos tus datos fuera de horario…»; cita confirmada → «✅ {nombre}, tu prueba de manejo/cita de taller queda el dd/mm HH:MM en {lugar}» (+ línea SmartClub en taller). Best-effort: nunca rompe el 201; logs con teléfono enmascarado. ✅
 - **F6** · conformidad con el contrato (schemathesis), reloj de demo y este README. ✅ (Docker, WhatsApp y despliegue AWS: siguiente paso.)
 
 ## Qué es real y qué es simulado
@@ -55,7 +59,8 @@ Copia `.env.example` a `.env` (ignorado por git). Ninguna es obligatoria para ar
 | Taller / órdenes de trabajo | **Simulado**: `FakeWorkshop` en memoria (`WO-AAAAMMDD-NNN`) |
 | Persistencia | **En memoria**: leads, citas y sesiones se pierden al reiniciar |
 | Hora de la demo | **Simulada** con `DEMO_NOW` (la demo es antes de las 18:00 y la métrica es `afterHours`) |
-| WhatsApp Cloud API y despliegue en AWS | **Siguiente paso**: diseñados, no incluidos en este MVP |
+| WhatsApp saliente (Meta Cloud API, número de prueba, ≤ 5 destinatarios): aviso al lead fuera de horario y confirmación de cita | **Real** con `WHATSAPP_ENABLED=1`; sin configurar no envía nada |
+| WhatsApp entrante (webhook) y despliegue de la API en AWS | **Siguiente paso**: diseñados, no incluidos en este MVP |
 
 ## Bedrock (F5)
 - Adapter `app/adapters/llm.py`: `LlmPort` + `BedrockLlm` + `FakeLlm` (tests). Cliente boto3 creado por llamada (si se refrescan las credenciales temporales no hay que reiniciar), `maxTokens` explícito, ≤ 1 solicitud/s en todo el proceso (`RateGate`, regla del evento), 1 reintento solo ante throttling/5xx. Cualquier otro error → `LlmError` → camino determinista (la API nunca devuelve 500 por el LLM).
