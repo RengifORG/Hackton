@@ -9,8 +9,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: gitleaks/gitleaks-action@v2
-        env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+      # gitleaks-action@v2 exige licencia de pago en repos de organización; el binario
+      # oficial (MIT) no. Versión fija + checksum del release; --redact: nunca imprime secretos.
+      - name: gitleaks (binario oficial)
+        env: { GITLEAKS_VERSION: "8.18.4" }
+        run: |
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          tarball="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfLO "${base}/${tarball}"
+          curl -sSfLO "${base}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          sha256sum --check --ignore-missing "gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          tar -xzf "${tarball}" gitleaks
+          ./gitleaks detect --source . --redact --verbose
   web:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: apps/web } }
