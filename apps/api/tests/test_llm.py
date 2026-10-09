@@ -417,3 +417,54 @@ def test_channel_service_uses_the_llm_from_app_state(client: TestClient, app: Fa
 def test_tool_spec_names_follow_bedrock_rules() -> None:
     assert isinstance(RECOMMEND_TOOL, ToolSpec)
     assert RECOMMEND_TOOL.input_schema["required"] == ["modelIds"]
+
+
+# ---------------------------------------------------------------- regresiones del QA en vivo
+
+NO_CHARGER = "Somos 4, uso en ciudad, presupuesto 25 mil, no tengo cargador en casa"
+
+
+def test_llm_without_phev_for_a_customer_without_charger_falls_back_to_scoring(
+    client: TestClient, use_llm: Callable[[FakeLlm], FakeLlm]
+) -> None:
+    # Caso real del QA: Haiku eligió [yuan-up, dolphin, seagull] e ignoró la regla CA2.4.
+    baseline = recommend(client, NO_CHARGER)
+    assert "shark" in baseline  # el scoring sí incluye el PHEV
+    use_llm(
+        FakeLlm(
+            LlmResult(
+                tool_name="recommend_models",
+                tool_input={"modelIds": ["yuan-up", "dolphin", "seagull"]},
+            )
+        )
+    )
+    assert recommend(client, NO_CHARGER) == baseline
+
+
+def test_llm_choice_with_a_phev_is_kept_for_a_customer_without_charger(
+    client: TestClient, use_llm: Callable[[FakeLlm], FakeLlm]
+) -> None:
+    use_llm(
+        FakeLlm(
+            LlmResult(
+                tool_name="recommend_models",
+                tool_input={"modelIds": ["shark", "dolphin", "yuan-up"]},
+            )
+        )
+    )
+    assert recommend(client, NO_CHARGER) == ["shark", "dolphin", "yuan-up"]
+
+
+@pytest.mark.parametrize("question", ["cuéntame de la pantalla", "tamaño del maletero"])
+def test_missing_catalog_data_skips_the_llm_and_uses_the_exact_phrase(
+    client: TestClient, use_llm: Callable[[FakeLlm], FakeLlm], question: str
+) -> None:
+    # Caso real del QA: sin dato, Haiku añadía adornos («una de sus características destacadas»).
+    fake = use_llm(FakeLlm(LlmResult(text="La pantalla es destacada.", stop_reason="end_turn")))
+    chat(client, "sess-qa-nodata-1", "hola")
+    response = client.post(
+        "/chat",
+        json={"sessionId": "sess-qa-nodata-1", "message": question, "modelId": "seagull"},
+    )
+    assert response.json()["reply"] == "No tengo ese dato, un asesor te confirma."
+    assert fake.calls == []
