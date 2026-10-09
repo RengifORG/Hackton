@@ -16,8 +16,8 @@ jobs:
         run: |
           base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
           tarball="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-          curl -sSfLO "${base}/${tarball}"
-          curl -sSfLO "${base}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          curl --proto "=https" --proto-redir "=https" --tlsv1.2 -sSfLO "${base}/${tarball}"
+          curl --proto "=https" --proto-redir "=https" --tlsv1.2 -sSfLO "${base}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
           sha256sum --check --ignore-missing "gitleaks_${GITLEAKS_VERSION}_checksums.txt"
           tar -xzf "${tarball}" gitleaks
           ./gitleaks detect --source . --redact --verbose
