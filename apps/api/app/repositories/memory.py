@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass, field
+from datetime import date
 from enum import StrEnum
 from typing import Annotated
 
@@ -108,6 +109,7 @@ class ChatSession:
     pending_phone: str | None = None
     awaiting_consent: bool = False
     offered_slots: list[str] = field(default_factory=list)
+    offered_day: date | None = None  # día de las franjas ofrecidas (elección por hora)
     profile: dict[str, str] = field(default_factory=dict)
 
 

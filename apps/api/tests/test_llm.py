@@ -398,7 +398,7 @@ def test_contact_and_slot_stages_make_zero_llm_calls(
     chat(client, sid, "quiero una prueba de manejo")
     chat(client, sid, f"Soy Ana Prueba, mi celular es {PHONE}")
     chat(client, sid, "sí")
-    chat(client, sid, "2")
+    chat(client, sid, "a las 10")
     assert len(client.get("/appointments").json()) == 1
     assert fake.calls == []
 

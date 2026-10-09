@@ -15,7 +15,7 @@ import logging
 import re
 import unicodedata
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Annotated, Any
 
 from fastapi import Depends
@@ -40,6 +40,7 @@ from app.services.appointment_service import (
 )
 from app.services.lead_service import LeadService, LeadServiceDep
 from app.services.recommendation_service import RecommendationService, RecommendationServiceDep
+from app.services.slot_parser import parse_slot_request
 
 log = logging.getLogger(__name__)
 
@@ -80,8 +81,7 @@ GREETING_ACTIONS = [
     SuggestedAction.BOOK_TEST_DRIVE,
     SuggestedAction.BOOK_SERVICE,
 ]
-MAX_OFFERED_SLOTS = 6
-WEEKDAYS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
+WEEKDAYS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
 TYPE_LABEL = {
     AppointmentType.TEST_DRIVE: "prueba de manejo",
     AppointmentType.SERVICE: "cita de taller",
@@ -314,12 +314,15 @@ def _detect_intent(norm: str) -> str | None:
     return None
 
 
-def _pick_index(norm: str, limit: int) -> int | None:
-    match = re.search(r"\b([1-9])\b", norm)
-    if not match:
-        return None
-    index = int(match.group(1))
-    return index if 1 <= index <= limit else None
+def _fmt_day(day: date) -> str:
+    """`viernes 09/10`."""
+    return f"{WEEKDAYS[day.weekday()]} {day:%d/%m}"
+
+
+def _fmt_hours(slots: list[Slot]) -> str:
+    """`09:00, 10:00 y 11:00`."""
+    hours = [f"{s.start.astimezone(ECUADOR_TZ):%H:%M}" for s in slots]
+    return hours[0] if len(hours) == 1 else ", ".join(hours[:-1]) + " y " + hours[-1]
 
 
 def _is_yes(norm: str) -> bool:
@@ -676,63 +679,127 @@ class ChatService:
         )
 
     # ------------------------------------------------------------ CITA
-    def _offer_slots(self, session: ChatSession, prefix: str = "") -> Turn:
+    def _today(self) -> date:
+        return self._clock.now().astimezone(ECUADOR_TZ).date()
+
+    def _free_slots(self, appointment_type: AppointmentType, day: date) -> list[Slot]:
+        return [s for s in self._appointments.availability(appointment_type, day) if s.available]
+
+    def _offer_slots(
+        self, session: ChatSession, prefix: str = "", from_day: date | None = None
+    ) -> Turn:
+        """Ofrece las horas libres del primer día con disponibilidad (desde mañana o `from_day`)."""
         appointment_type = session.pending_type or AppointmentType.TEST_DRIVE
-        today = self._clock.now().astimezone(ECUADOR_TZ).date()
-        slots: list[Slot] = []
-        for offset in range(1, SLOTS_DAYS + 1):
-            day = today + timedelta(days=offset)
-            slots = [
-                s for s in self._appointments.availability(appointment_type, day) if s.available
-            ]
+        today = self._today()
+        first = max(from_day or today + timedelta(days=1), today + timedelta(days=1))
+        last = today + timedelta(days=SLOTS_DAYS)
+        day, slots = first, []
+        while day <= last:
+            slots = self._free_slots(appointment_type, day)
             if slots:
                 break
+            day += timedelta(days=1)
         if not slots:
             session.stage = Stage.DONE
-            return Turn(NO_SLOTS, [SuggestedAction.LEAVE_CONTACT])
-        slots = slots[:MAX_OFFERED_SLOTS]
-        session.offered_slots = [s.id for s in slots]
-        session.stage = Stage.SLOT
-        lines = "\n".join(f"{i}. {self._fmt_slot(s)}" for i, s in enumerate(slots, 1))
+            return Turn(f"{prefix}{NO_SLOTS}", [SuggestedAction.LEAVE_CONTACT])
+        self._remember_offer(session, day, slots)
         return Turn(
-            f"{prefix}Tengo estas franjas para tu {TYPE_LABEL[appointment_type]}:\n{lines}\n\n"
-            "Responde con el número de la franja.",
+            f"{prefix}Para tu {TYPE_LABEL[appointment_type]} en {slots[0].location} tengo libre "
+            f"el {_fmt_day(day)} a las {_fmt_hours(slots)}. ¿A qué hora te queda bien? "
+            "Si prefieres otro día, dime cuál (por ejemplo «el sábado a las 11»).",
             [],
         )
 
+    @staticmethod
+    def _remember_offer(session: ChatSession, day: date, slots: list[Slot]) -> None:
+        session.offered_slots = [s.id for s in slots]
+        session.offered_day = day
+        session.stage = Stage.SLOT
+
     def _handle_slot(self, session: ChatSession, norm: str) -> Turn:
-        index = _pick_index(norm, len(session.offered_slots))
-        if index is None:
-            return Turn(
-                f"Respóndeme con el número de la franja (1–{len(session.offered_slots)}).", []
-            )
+        """El cliente responde como hablaría («mañana 10 am», «el sábado a las 3»); la cita solo
+        se crea si esa hora es una franja libre real del calendario."""
         appointment_type = session.pending_type or AppointmentType.TEST_DRIVE
+        today = self._today()
+        request = parse_slot_request(norm, today)
+        offered_day = session.offered_day or today + timedelta(days=1)
+        if request.day is None and request.hour is None:
+            if request.other_day:
+                return self._offer_slots(session, from_day=offered_day + timedelta(days=1))
+            slots = self._free_slots(appointment_type, offered_day)
+            return Turn(
+                f"¿A qué hora te queda bien? El {_fmt_day(offered_day)} tengo libre a las "
+                f"{_fmt_hours(slots)}. También puedes decirme otro día.",
+                [],
+            )
+        day = request.day or offered_day
+        if day <= today or day > today + timedelta(days=SLOTS_DAYS):
+            return self._offer_slots(
+                session, prefix="Puedo agendar desde mañana y hasta dentro de dos semanas. "
+            )
+        day_slots = self._appointments.availability(appointment_type, day)
+        free = [s for s in day_slots if s.available]
+        if request.hour is None:
+            if free:
+                self._remember_offer(session, day, free)
+                return Turn(
+                    f"El {_fmt_day(day)} tengo libre a las {_fmt_hours(free)}. "
+                    "¿A qué hora te queda bien?",
+                    [],
+                )
+            return self._offer_slots(
+                session,
+                prefix=f"El {_fmt_day(day)} no tengo horarios libres. ",
+                from_day=day + timedelta(days=1),
+            )
+        wanted = f"{request.hour:02d}:{request.minute:02d}"
+        match = next(
+            (
+                s
+                for s in day_slots
+                if (s.start.astimezone(ECUADOR_TZ).hour, s.start.astimezone(ECUADOR_TZ).minute)
+                == (request.hour, request.minute)
+            ),
+            None,
+        )
+        if match is not None and match.available:
+            return self._book(session, appointment_type, match.id, day)
+        reason = (
+            f"A las {wanted} ya está ocupado el {_fmt_day(day)}. "
+            if match is not None
+            else f"A las {wanted} no atendemos (lunes a sábado, de 09:00 a 17:00). "
+        )
+        if free:
+            self._remember_offer(session, day, free)
+            return Turn(
+                f"{reason}Ese día tengo libre a las {_fmt_hours(free)}. ¿Cuál te sirve?", []
+            )
+        return self._offer_slots(session, prefix=reason, from_day=day + timedelta(days=1))
+
+    def _book(
+        self, session: ChatSession, appointment_type: AppointmentType, slot_id: str, day: date
+    ) -> Turn:
         try:
             appointment = self._appointments.create(
                 AppointmentCreate(
-                    lead_id=session.lead_id or "",
-                    type=appointment_type,
-                    slot_id=session.offered_slots[index - 1],
+                    lead_id=session.lead_id or "", type=appointment_type, slot_id=slot_id
                 )
             )
         except SlotTakenError:
-            return self._offer_slots(session, prefix="Esa franja se acaba de ocupar. ")
+            return self._offer_slots(session, prefix="Esa hora se acaba de ocupar. ", from_day=day)
         session.offered_slots = []
+        session.offered_day = None
         session.pending_type = None
         session.stage = Stage.DONE
         start = appointment.slot.start.astimezone(ECUADOR_TZ)
         reply = (
             f"✅ Listo, {session.lead_first_name}. Tu {TYPE_LABEL[appointment_type]} queda el "
-            f"{start:%d/%m %H:%M} en {appointment.slot.location}. {FOLLOW_UP}"
+            f"{_fmt_day(start.date())} a las {start:%H:%M} en {appointment.slot.location}. "
+            f"{FOLLOW_UP}"
         )
         if appointment_type is AppointmentType.SERVICE:
             reply += f"\n{LOYALTY_NOTE}"
         return Turn(reply, [SuggestedAction.VIEW_3D, SuggestedAction.RECOMMEND])
-
-    @staticmethod
-    def _fmt_slot(slot: Slot) -> str:
-        start = slot.start.astimezone(ECUADOR_TZ)
-        return f"{WEEKDAYS[start.weekday()]} {start:%d/%m %H:%M} — {slot.location}"
 
 
 def build_chat_service(state: Any) -> ChatService:
