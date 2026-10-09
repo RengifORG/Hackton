@@ -32,6 +32,7 @@ from app.services.chat_service import DETAIL_SYSTEM, build_chat_service
 from app.services.recommendation_service import RECOMMEND_TOOL
 
 HAIKU = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+SONNET = "us.anthropic.claude-sonnet-4-6"
 NOVA = "amazon.nova-lite-v1:0"
 CATALOG = CatalogRepo.from_file(DATA_DIR / "catalog.json")
 PHONE, EMAIL = "0991234567", "ana.prueba@correo.com"
@@ -234,11 +235,11 @@ def test_build_llm_only_when_use_bedrock_is_on() -> None:
     on = Settings(_env_file=None, use_bedrock=True, aws_profile="hackathon")
     llm = build_llm(on)
     assert isinstance(llm, BedrockLlm)  # construir no abre conexiones ni lee credenciales
-    assert llm.model_id == HAIKU
+    assert llm.model_id == SONNET
 
 
-def test_default_model_is_claude_haiku_inference_profile() -> None:
-    assert Settings(_env_file=None).bedrock_model_id == HAIKU
+def test_default_model_is_claude_sonnet_inference_profile() -> None:
+    assert Settings(_env_file=None).bedrock_model_id == SONNET
 
 
 # ---------------------------------------------------------------- PII antes del LLM
@@ -464,9 +465,9 @@ def test_missing_catalog_data_skips_the_llm_and_uses_the_exact_phrase(
     chat(client, "sess-qa-nodata-1", "hola")
     response = client.post(
         "/chat",
-        json={"sessionId": "sess-qa-nodata-1", "message": question, "modelId": "seagull"},
+        json={"sessionId": "sess-qa-nodata-1", "message": question, "modelId": "yuan-up"},
     )
     reply = response.json()["reply"]
     assert reply.startswith("No tengo ese dato, un asesor te confirma.")
-    assert "sí puedo contarte" in reply and "pantalla" in reply  # ofrece lo que sí hay
+    assert "sí puedo contarte" in reply and "asientos" in reply  # ofrece lo que sí hay
     assert fake.calls == []

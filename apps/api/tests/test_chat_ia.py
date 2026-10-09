@@ -86,11 +86,21 @@ def test_seagull_screen_now_comes_from_the_official_catalog(client: TestClient) 
 
 
 def test_missing_data_offers_what_we_do_know(client: TestClient) -> None:
-    say(client, "sess-ia-nodata", "hola", modelId="seagull")
-    body = say(client, "sess-ia-nodata", "¿y las llantas?", modelId="seagull")
+    say(client, "sess-ia-nodata", "hola", modelId="yuan-up")
+    body = say(client, "sess-ia-nodata", "¿y las llantas?", modelId="yuan-up")
     assert body["reply"].startswith(NO_DATA)
-    assert "Del BYD Seagull sí puedo contarte:" in body["reply"]
-    assert "pantalla" in body["reply"] and "llantas" not in body["reply"].split(":", 1)[1]
+    assert "Del BYD Yuan Up sí puedo contarte:" in body["reply"]
+    assert "asientos" in body["reply"] and "llantas" not in body["reply"].split(":", 1)[1]
+
+
+def test_referential_specs_are_answered_and_flagged(client: TestClient) -> None:
+    say(client, "sess-ia-ref", "hola", modelId="seagull")
+    wheels = say(client, "sess-ia-ref", "¿y las llantas?", modelId="seagull")["reply"]
+    assert "165/65 R15 o 175/55 R16" in wheels and "Dato referencial" in wheels
+    trunk = say(client, "sess-ia-ref", "cuánto entra en el maletero?", modelId="seagull")["reply"]
+    assert "hasta 930 L con los asientos traseros abatidos" in trunk
+    screen = say(client, "sess-ia-ref", "cuéntame de la pantalla", modelId="seagull")["reply"]
+    assert "10.1" in screen and "Dato referencial" not in screen  # oficial
 
 
 @pytest.mark.parametrize(

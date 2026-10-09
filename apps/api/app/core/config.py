@@ -36,8 +36,10 @@ class Settings(BaseSettings):
     use_bedrock: bool = False
     aws_region: str = "us-east-1"
     aws_profile: str | None = None
-    # D3: Claude Haiku 4.5 vía perfil de inferencia `us.`; respaldo `amazon.nova-lite-v1:0`.
-    bedrock_model_id: str = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+    # D3 (actualizado 2026-10-08): Claude Sonnet 4.6 vía perfil `us.` (Sonnet 5 y 5.5 aparecen en
+    # la cuenta del evento pero sin acceso). Más rápido: Haiku 4.5
+    # (us.anthropic.claude-haiku-4-5-20251001-v1:0).
+    bedrock_model_id: str = "us.anthropic.claude-sonnet-4-6"
     bedrock_guardrail_id: str | None = None
     bedrock_guardrail_version: str = "DRAFT"
     # Simulación de hora para la demo (F6), p. ej. `2026-10-08T19:00:00-05:00`. Vacío = hora real.

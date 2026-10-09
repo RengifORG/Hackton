@@ -110,8 +110,8 @@ def test_hotspot_synonyms_and_replies_come_from_the_catalog(
         ("cuánta batería tiene", "battery", "30.08"),
         ("cuál es la autonomía", "battery", "300"),
         ("cómo son las luces", "lights", "LED"),
-        ("¿y las ruedas?", "wheels", "No tengo ese dato"),  # sin dato en el catálogo: no inventa
-        ("tamaño del maletero", "trunk", "No tengo ese dato"),
+        ("¿y las ruedas?", "wheels", "165/65 R15 o 175/55 R16"),  # referencial, lo dice
+        ("tamaño del maletero", "trunk", "hasta 930 L"),
     ],
 )
 def test_seagull_page_answers_with_the_seagull_catalog(
@@ -136,7 +136,7 @@ def test_without_model_the_detail_is_about_the_3d_model(client: TestClient) -> N
 
 
 def test_missing_catalog_data_is_not_invented(client: TestClient) -> None:
-    body = chat(client, "sess-detail-02", "cuéntame de las llantas", modelId="seagull")
+    body = chat(client, "sess-detail-02", "cuéntame de las llantas", modelId="yuan-up")
     assert "No tengo ese dato, un asesor te confirma" in body["reply"]
     assert body["hotspot"] == "wheels"
 

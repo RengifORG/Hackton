@@ -24,7 +24,7 @@ Copia `.env.example` a `.env` (ignorado por git). Ninguna es obligatoria para ar
 | `USE_BEDROCK` | `0` | `1` activa Amazon Bedrock (F5); si no, camino determinista |
 | `AWS_PROFILE` | vacío | Perfil de `~/.aws/credentials` que usa boto3 (las llaves **no** van en `.env`) |
 | `AWS_REGION` | `us-east-1` | Región de Bedrock (única habilitada en la cuenta del evento) |
-| `BEDROCK_MODEL_ID` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Modelo (Converse API); respaldo `amazon.nova-lite-v1:0` |
+| `BEDROCK_MODEL_ID` | `us.anthropic.claude-sonnet-4-6` | Modelo (Converse API); más rápido: `us.anthropic.claude-haiku-4-5-20251001-v1:0` |
 | `BEDROCK_GUARDRAIL_ID` / `_VERSION` | vacío / `DRAFT` | Guardrail opcional (no desplegado en el MVP) |
 | `WHATSAPP_ENABLED` | `0` | `1` envía confirmaciones por WhatsApp Cloud API (F7a) |
 | `WHATSAPP_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` | vacío | Token (temporal, consola de Meta) e id del número de prueba; **nunca en el repo** |
@@ -44,7 +44,7 @@ Copia `.env.example` a `.env` (ignorado por git). Ninguna es obligatoria para ar
 - **F2** · H4 citas: `GET /availability?type&date` desde `data/slots.json` (lo genera la API) y `POST /appointments` (201, 404 lead/franja, 409 franja ocupada, 20/min → 429) con `GET /appointments?type`. ✅
 - **F3** · H3 chat determinista: `POST /chat` con saludo + aviso LOPDP, intención por palabras clave, CONTACTO (nombre + celular + consentimiento explícito → lead) antes de CITA (franjas numeradas → cita), detalle solo con datos del catálogo y `hotspot` por sinónimos, 20/min → 429. ✅
 - **F4** · H2 recomendaciones: `POST /recommendations` con parser del perfil (uso, pasajeros, presupuesto, cargador) y scoring determinista del `decision-tree.md`; exactamente 3 modelos del catálogo con razón ≤ 200. El chat lo usa en la etapa de perfil. ✅
-- **F5** · Bedrock: `/chat` (etapa detalle) y `/recommendations` usan Claude Haiku 4.5 vía Converse con validación y fallback determinista. ✅
+- **F5** · Bedrock: `/chat` (etapa detalle) y `/recommendations` usan Claude Sonnet 4.6 vía Converse con validación y fallback determinista. ✅
 - **F7a** · H7 WhatsApp saliente: lead fuera de horario → «Hola {nombre}, recibimos tus datos fuera de horario…»; cita confirmada → «✅ {nombre}, tu prueba de manejo/cita de taller queda el dd/mm HH:MM en {lugar}» (+ línea SmartClub en taller). Best-effort: nunca rompe el 201; logs con teléfono enmascarado. ✅
 - **F6** · conformidad con el contrato (schemathesis), reloj de demo y este README. ✅ (Docker, WhatsApp y despliegue AWS: siguiente paso.)
 
@@ -53,7 +53,7 @@ Copia `.env.example` a `.env` (ignorado por git). Ninguna es obligatoria para ar
 |---|---|
 | API FastAPI (validación estricta, rate limit, CORS, logs JSON con PII redactada) | **Real** |
 | Reglas de negocio: `afterHours`, franjas, 409, CONTACTO → CITA, scoring de recomendaciones | **Real** (deterministas, con tests) |
-| Amazon Bedrock · Claude Haiku 4.5 (`us-east-1`, Converse) en la ficha del chat y en `/recommendations` | **Real** con `USE_BEDROCK=1` y credenciales del perfil; si falla o no hay credenciales, responde el camino determinista |
+| Amazon Bedrock · Claude Sonnet 4.6 (`us-east-1`, Converse) en la ficha del chat y en `/recommendations` | **Real** con `USE_BEDROCK=1` y credenciales del perfil; si falla o no hay credenciales, responde el camino determinista |
 | Visor 3D del Seagull (web; único asset 3D disponible) | **Real** |
 | CRM HubSpot | **Simulado**: `FakeCrm` en memoria si no hay `HUBSPOT_TOKEN` |
 | Taller / órdenes de trabajo | **Simulado**: `FakeWorkshop` en memoria (`WO-AAAAMMDD-NNN`) |
